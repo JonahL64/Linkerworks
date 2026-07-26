@@ -1,18 +1,22 @@
-//
-//  AppIntent.swift
-//  LinkerworksWidget
-//
-//  Created by Jonah Linker on 7/21/26.
-//
-
-import WidgetKit
 import AppIntents
+import SwiftData
+import WidgetKit
 
-struct ConfigurationAppIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Configuration" }
-    static var description: IntentDescription { "This is an example widget." }
+struct CompleteRoutineTaskIntent: AppIntent {
+    static var title: LocalizedStringResource = "Complete Routine Task"
+    static var description = IntentDescription("Marks this routine task complete for today.")
 
-    // An example configurable parameter.
-    @Parameter(title: "Favorite Emoji", default: "😃")
-    var favoriteEmoji: String
+    @Parameter(title: "Task ID") var taskID: String
+
+    init() {}
+    init(taskID: String) { self.taskID = taskID }
+
+    func perform() async throws -> some IntentResult {
+        guard let id = UUID(uuidString: taskID) else { throw CompletionIntentError.invalidTask }
+        let context = ModelContext(try SharedModelContainer.make())
+        try RoutineCompletionCommand.complete(taskID: id, in: context)
+        return .result()
+    }
 }
+
+enum CompletionIntentError: Error { case invalidTask }

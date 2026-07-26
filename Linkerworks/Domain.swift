@@ -1,5 +1,107 @@
 import Foundation
 import SwiftData
+import WidgetKit
+
+enum WidgetTimeline {
+    static let routineKind = "LinkerworksWidget"
+    static let assignmentKind = "LinkerworksAssignmentWidget"
+
+    static func reloadAll() {
+        WidgetCenter.shared.reloadTimelines(ofKind: routineKind)
+        WidgetCenter.shared.reloadTimelines(ofKind: assignmentKind)
+    }
+}
+
+/// Stable projection ordering used by the widget and characterized in tests.
+struct WidgetRoutineSortKey: Comparable {
+    let category: Int
+    let time: Date?
+    let sectionOrder: Int
+    let taskOrder: Int
+    let title: String
+
+    init(timeText: String?, on date: Date, now: Date, sectionOrder: Int, taskOrder: Int, title: String, calendar: Calendar = .current) {
+        let parts = timeText?.split(separator: ":", omittingEmptySubsequences: false) ?? []
+        let hour = parts.count == 2 ? Int(parts[0]) : nil
+        let minute = parts.count == 2 ? Int(parts[1]) : nil
+        let parsed = hour.flatMap { hour in
+            minute.flatMap { minute in
+                guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+                return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date)
+            }
+        }
+        time = parsed
+        category = parsed == nil ? 2 : (parsed! < now ? 0 : 1)
+        self.sectionOrder = sectionOrder
+        self.taskOrder = taskOrder
+        self.title = title
+    }
+
+    static func < (lhs: Self, rhs: Self) -> Bool {
+        if lhs.category != rhs.category { return lhs.category < rhs.category }
+        if let lhsTime = lhs.time, let rhsTime = rhs.time, lhsTime != rhsTime { return lhsTime < rhsTime }
+        if lhs.sectionOrder != rhs.sectionOrder { return lhs.sectionOrder < rhs.sectionOrder }
+        if lhs.taskOrder != rhs.taskOrder { return lhs.taskOrder < rhs.taskOrder }
+        return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+    }
+}
+
+/// The only persistence mutation for a routine completion state. It is shared
+/// by Today and WidgetKit so child-derived lift completion never diverges.
+enum RoutineCompletionCommand {
+    static func apply(
+        taskIDs: Set<UUID>,
+        recordTaskIDs: Set<UUID>,
+        date: Date,
+        state: CompletionRecordState?,
+        in context: ModelContext,
+        calendar: Calendar = .current
+    ) throws {
+        _ = try DaySnapshotService.captureIfNeeded(for: date, in: context, calendar: calendar)
+        let start = calendar.startOfDay(for: date)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return }
+        let records = try context.fetch(FetchDescriptor<CompletionRecord>(predicate: #Predicate {
+            $0.date >= start && $0.date < end
+        }))
+        records.filter { taskIDs.contains($0.taskId) }.forEach(context.delete)
+        if let state {
+            recordTaskIDs.forEach { context.insert(CompletionRecord(date: date, taskId: $0, state: state)) }
+        }
+        try context.save()
+        WidgetTimeline.reloadAll()
+    }
+
+    /// Completes an incomplete task at the point of action. Parent tasks with
+    /// active children write child records, exactly as Today's parent control.
+    static func complete(
+        taskID: UUID,
+        at date: Date = .now,
+        in context: ModelContext,
+        calendar: Calendar = .current
+    ) throws {
+        let tasks = try context.fetch(FetchDescriptor<TaskItem>())
+        guard let task = tasks.first(where: { $0.id == taskID && !$0.isArchived }) else {
+            throw RoutineCompletionError.taskUnavailable
+        }
+        let weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        let weekdayIndex = calendar.component(.weekday, from: date) - 1
+        guard weekdayNames.indices.contains(weekdayIndex), task.daysOfWeek.contains(weekdayNames[weekdayIndex]) else {
+            throw RoutineCompletionError.taskUnavailable
+        }
+        let children = task.children.filter { !$0.isArchived }
+        let recordIDs = children.isEmpty ? Set([task.id]) : Set(children.map(\.id))
+        let affectedIDs = recordIDs.union([task.id])
+        try apply(taskIDs: affectedIDs, recordTaskIDs: recordIDs, date: date, state: .complete, in: context)
+    }
+}
+
+enum RoutineCompletionError: LocalizedError {
+    case taskUnavailable
+
+    var errorDescription: String? {
+        "This task is no longer available for today."
+    }
+}
 
 enum Domain: String, Codable, CaseIterable, Identifiable, Sendable {
     case sleep

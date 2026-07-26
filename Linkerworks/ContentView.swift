@@ -450,6 +450,7 @@ private struct TodayView: View {
                 assignment.updatedAt = Date()
                 do {
                     try modelContext.save()
+                    WidgetTimeline.reloadAll()
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 } catch {
                     modelContext.rollback()
@@ -758,17 +759,15 @@ private struct TodayView: View {
                 TaskCompletion.isComplete($0, completedTaskIDs: projectedCompletedIDs)
             }
 
-        guard captureTodayIfNeeded() else { return }
-        matchingRecords.forEach(modelContext.delete)
-        if let resultingState {
-            for taskID in recordTaskIDs {
-                modelContext.insert(CompletionRecord(date: today, taskId: taskID, state: resultingState))
-            }
-        }
-
         do {
-            try modelContext.save()
-            WidgetCenter.shared.reloadTimelines(ofKind: "LinkerworksWidget")
+            try RoutineCompletionCommand.apply(
+                taskIDs: taskIDs,
+                recordTaskIDs: recordTaskIDs,
+                date: today,
+                state: resultingState,
+                in: modelContext,
+                calendar: calendar
+            )
 
             withAnimation(.snappy) {
                 manuallyExpandedCompletedSectionIDs.subtract(completedSections.map(\.id))
@@ -938,7 +937,7 @@ private struct TodayView: View {
 
         do {
             try modelContext.save()
-            WidgetCenter.shared.reloadTimelines(ofKind: "LinkerworksWidget")
+            WidgetTimeline.reloadAll()
             withAnimation(.snappy) {
                 undoState = nil
                 collapsedSectionIDs.subtract(todaySections.filter {

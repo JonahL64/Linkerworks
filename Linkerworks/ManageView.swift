@@ -161,6 +161,7 @@ struct ManageView: View {
     private func saveChanges() {
         do {
             try modelContext.save()
+            WidgetTimeline.reloadAll()
         } catch {
             saveErrorMessage = error.localizedDescription
         }
@@ -509,6 +510,7 @@ private struct TaskEditorView: View {
 
         do {
             try modelContext.save()
+            WidgetTimeline.reloadAll()
             dismiss()
         } catch {
             saveErrorMessage = error.localizedDescription
@@ -530,6 +532,7 @@ private struct TaskEditorView: View {
     private func saveAndDismiss() {
         do {
             try modelContext.save()
+            WidgetTimeline.reloadAll()
             dismiss()
         } catch {
             saveErrorMessage = error.localizedDescription

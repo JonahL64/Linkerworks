@@ -263,3 +263,18 @@ Saved Meals now has a manager reachable from Nutritionâ€™s overflow menu: p
 The daily summary displays consumed/target plus an explicit remaining count for calories, protein, carbs, fat, and fiber, all with monospaced digits.
 Today now queries SavedMeal and shows its first four ordered presets in a one-tap EATING row; it creates independent MealEntry copies for today.
 Validation passed: `swiftc -parse Linkerworks/NutritionView.swift Linkerworks/ContentView.swift` and `git diff --check`; full Xcode/device interaction testing is still required on this host.
+
+Sprint 8 Widgets 2.0 planning created `_bmad-output/implementation-artifacts/spec-sprint-8-widgets-2.md`; implementation is awaiting Quick Dev approval.
+The iOS deployment target is 26.5 for the app and widget extension, exceeding iOS 17 interactive-widget requirements.
+Planning confirmed the widget sort bug in `LinkerworksWidget/LinkerworksWidget.swift`: it needs overdue timed, upcoming timed, then untimed routine ordering.
+The current shared completion mutation remains private to `TodayView` in `Linkerworks/ContentView.swift`; Sprint 8 must extract it for the AppIntent to make identical records.
+Routine management and assignment/course writes presently do not all reload widgets; Sprint 8 will add reloads after successful relevant saves.
+No app, widget, model, target, entitlement, or test source was changed during this planning checkpoint.
+
+Sprint 8 Widgets 2.0 changed `Linkerworks/Domain.swift`, Today/Manage/Homework writes, and the widget extension; no SwiftData schema, entitlement, seed, or navigation changes were made.
+`RoutineCompletionCommand` is the shared completion mutation for Today and `CompleteRoutineTaskIntent`, including snapshot capture, lift-child record batches, rollback-safe save behavior, and both widget timeline reloads.
+Widget projection now orders overdue timed tasks, upcoming timed tasks, then untimed section/task order; the medium widget shows a progress ring plus three interactive tasks.
+`LinkerworksAssignmentWidget` displays the nearest unfinished dated assignment with its course-color dot and due time; lock-screen rectangular displays progress plus Next.
+Routine-management, assignment, and course writes now reload both widget kinds after successful saves; unavailable, neutral, Day complete, deep-link, and hourly/midnight refresh behavior remains.
+`LinkerworksTests/WidgetProjectionTests.swift` covers ordering, no-due assignment exclusion, and lift-parent completion records.
+Validation passed: target-separated `swiftc -parse` and `git diff --check`; full Xcode build, XCTest execution, and device/Simulator widget interaction verification remain required on this Windows host.

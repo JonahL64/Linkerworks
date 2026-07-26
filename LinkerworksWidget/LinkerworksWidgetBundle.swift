@@ -12,5 +12,6 @@ import SwiftUI
 struct LinkerworksWidgetBundle: WidgetBundle {
     var body: some Widget {
         LinkerworksWidget()
+        LinkerworksAssignmentWidget()
     }
 }
