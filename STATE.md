@@ -337,3 +337,10 @@ Per-section filtering, completion hiding, collapsing, task completion, and lift 
 Independent review found no functional defect; it noted only the absence of an existing UI/snapshot test harness.
 Validation passed: `swiftc -parse Linkerworks/*.swift LinkerworksWidget/*.swift LinkerworksTests/*.swift` and `git diff --check`.
 Full Xcode/device or Simulator visual verification remains unavailable on this machine.
+
+Today routine navigation follow-up changed `Linkerworks/ContentView.swift` only.
+Flexible phases are now the sole collapsible Today groups; imported section names no longer create duplicate nested controls.
+Each phase header reports its own completion total, exposes an accessible expand/collapse action, and retains the phase guidance label.
+Task order, hide-completed filtering, completion changes, auto-collapse after finishing, undo reopening, and lift sub-step expansion all now use phase-level groups.
+Independent review found no functional regression in task order, completion, collapse, hide-completed behavior, or accessibility.
+Validation passed: `swiftc -parse Linkerworks/*.swift LinkerworksWidget/*.swift LinkerworksTests/*.swift` and `git diff --check`.

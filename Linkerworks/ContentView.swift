@@ -68,8 +68,8 @@ private struct TodayView: View {
     @State private var saveErrorMessage: String?
     @State private var completionMomentVisible = false
     @State private var completionRingPulsing = false
-    @State private var collapsedSectionIDs: Set<UUID> = []
-    @State private var manuallyExpandedCompletedSectionIDs: Set<UUID> = []
+    @State private var collapsedPhases: Set<RoutineDayPhase> = []
+    @State private var manuallyExpandedCompletedPhases: Set<RoutineDayPhase> = []
     @State private var expandedLiftParentIDs: Set<UUID> = []
     @State private var undoState: CompletionUndo?
     @State private var isSavingCompletion = false
@@ -294,17 +294,17 @@ private struct TodayView: View {
             }
             .onAppear {
                 _ = captureTodayIfNeeded()
-                collapseFinishedSections()
+                collapseFinishedPhases()
             }
             .onChange(of: completedTaskIDs) { _, _ in
-                collapseFinishedSections()
+                collapseFinishedPhases()
             }
             .onChange(of: today) { _, _ in
-                collapsedSectionIDs.removeAll()
-                manuallyExpandedCompletedSectionIDs.removeAll()
+                collapsedPhases.removeAll()
+                manuallyExpandedCompletedPhases.removeAll()
                 expandedLiftParentIDs.removeAll()
                 _ = captureTodayIfNeeded()
-                collapseFinishedSections()
+                collapseFinishedPhases()
             }
             .task {
                 while !Task.isCancelled {
@@ -376,44 +376,30 @@ private struct TodayView: View {
 
     private var routinePhaseSections: some View {
         ForEach(RoutineDayPhase.allCases) { phase in
-            let phaseSections = todaySections.filter {
-                tasks(in: $0).contains { $0.routinePhase == phase }
-            }
-            if !phaseSections.isEmpty {
+            let phaseTasks = routineTasks(in: phase)
+            if !phaseTasks.isEmpty {
                 SwiftUI.Section {
-                    ForEach(phaseSections) { section in
-                        routineSectionRows(section, for: phase)
-                    }
-                } header: {
-                    phaseSectionHeader(phase)
-                }
-            }
-        }
-    }
+                    if !isPhaseCollapsed(phase) {
+                        ForEach(phaseTasks) { task in
+                            if !shouldHide(task) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    taskRow(task, isSubstep: false)
 
-    @ViewBuilder
-    private func routineSectionRows(_ section: Section, for phase: RoutineDayPhase) -> some View {
-        let phaseTasks = tasks(in: section).filter { $0.routinePhase == phase }
-
-        sectionHeader(section)
-            .trainingLogRow()
-
-        if !isSectionCollapsed(section) {
-            ForEach(phaseTasks) { task in
-                if !shouldHide(task) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        taskRow(task, isSubstep: false)
-
-                        if expandedLiftParentIDs.contains(task.id) {
-                            ForEach(children(of: task)) { child in
-                                if !shouldHide(child) {
-                                    taskRow(child, isSubstep: true)
-                                        .padding(.leading, 28)
+                                    if expandedLiftParentIDs.contains(task.id) {
+                                        ForEach(children(of: task)) { child in
+                                            if !shouldHide(child) {
+                                                taskRow(child, isSubstep: true)
+                                                    .padding(.leading, 28)
+                                            }
+                                        }
+                                    }
                                 }
+                                .padding(.vertical, 4)
                             }
                         }
                     }
-                    .padding(.vertical, 4)
+                } header: {
+                    phaseSectionHeader(phase, tasks: phaseTasks)
                 }
             }
         }
@@ -455,18 +441,48 @@ private struct TodayView: View {
         .trainingLogRow()
     }
 
-    private func phaseSectionHeader(_ phase: RoutineDayPhase) -> some View {
+    private func phaseSectionHeader(_ phase: RoutineDayPhase, tasks: [TaskItem]) -> some View {
         let phaseLabel = RoutinePhasePreferences.label(for: phase)
         let startGuidance = RoutinePhasePreferences.startGuidance(for: phase)
         let guidanceText = startGuidance.map { "From \($0)" } ?? "Flexible"
+        let completed = tasks.filter { isTaskComplete($0) }.count
 
-        return VStack(alignment: .leading, spacing: 2) {
-            Text(phaseLabel)
-                .trainingLogSectionLabel()
-            Text(guidanceText)
-                .font(.caption)
-                .foregroundStyle(TrainingLogTheme.secondaryText)
+        return Button {
+            if collapsedPhases.contains(phase) {
+                collapsedPhases.remove(phase)
+                if isPhaseComplete(phase) {
+                    manuallyExpandedCompletedPhases.insert(phase)
+                }
+            } else {
+                collapsedPhases.insert(phase)
+                manuallyExpandedCompletedPhases.remove(phase)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(phaseLabel)
+                        .trainingLogSectionLabel()
+                    Text(guidanceText)
+                        .font(.caption)
+                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                }
+
+                Spacer(minLength: 8)
+
+                Text("\(completed)/\(tasks.count)")
+                    .font(.caption.weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(TrainingLogTheme.secondaryText)
+
+                Image(systemName: isPhaseCollapsed(phase) ? "chevron.right" : "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(TrainingLogTheme.secondaryText)
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(phaseLabel), \(completed) of \(tasks.count) complete")
+        .accessibilityHint(isPhaseCollapsed(phase) ? "Double tap to expand" : "Double tap to collapse")
     }
 
     private func tasks(in section: Section) -> [TaskItem] {
@@ -496,63 +512,28 @@ private struct TodayView: View {
             }
     }
 
-    private func isSectionComplete(_ section: Section) -> Bool {
-        isSectionComplete(section, completedIDs: completedTaskIDs)
+    private func routineTasks(in phase: RoutineDayPhase) -> [TaskItem] {
+        todaySections.flatMap { tasks(in: $0) }
+            .filter { $0.routinePhase == phase }
     }
 
-    private func isSectionComplete(_ section: Section, completedIDs: Set<UUID>) -> Bool {
-        let sectionTasks = tasks(in: section)
-        return !sectionTasks.isEmpty && sectionTasks.allSatisfy {
+    private func isPhaseComplete(_ phase: RoutineDayPhase) -> Bool {
+        isPhaseComplete(phase, completedIDs: completedTaskIDs)
+    }
+
+    private func isPhaseComplete(_ phase: RoutineDayPhase, completedIDs: Set<UUID>) -> Bool {
+        let phaseTasks = routineTasks(in: phase)
+        return !phaseTasks.isEmpty && phaseTasks.allSatisfy {
             isTaskComplete($0, completedIDs: completedIDs)
         }
     }
 
-    private func isSectionCollapsed(_ section: Section) -> Bool {
-        collapsedSectionIDs.contains(section.id)
+    private func isPhaseCollapsed(_ phase: RoutineDayPhase) -> Bool {
+        collapsedPhases.contains(phase)
     }
 
     private func shouldHide(_ task: TaskItem) -> Bool {
         hideCompleted && isTaskComplete(task)
-    }
-
-    private func sectionHeader(_ section: Section) -> some View {
-        let sectionTasks = tasks(in: section)
-        let total = sectionTasks.count
-        let completed = sectionTasks.filter {
-            isTaskComplete($0)
-        }.count
-
-        return Button {
-            if collapsedSectionIDs.contains(section.id) {
-                collapsedSectionIDs.remove(section.id)
-                if isSectionComplete(section) {
-                    manuallyExpandedCompletedSectionIDs.insert(section.id)
-                }
-            } else {
-                collapsedSectionIDs.insert(section.id)
-                manuallyExpandedCompletedSectionIDs.remove(section.id)
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Text(section.name)
-                    .trainingLogSectionLabel()
-
-                Spacer(minLength: 8)
-
-                Text("\(completed)/\(total)")
-                    .font(.caption.weight(.medium))
-                    .monospacedDigit()
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
-
-                Image(systemName: isSectionCollapsed(section) ? "chevron.right" : "chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(section.name), \(completed) of \(total) complete")
-        .accessibilityHint(isSectionCollapsed(section) ? "Double tap to expand" : "Double tap to collapse")
     }
 
     private var nowDivider: some View {
@@ -745,9 +726,9 @@ private struct TodayView: View {
             projectedCompletedIDs.subtract(taskIDs)
         }
 
-        let completedSections = todaySections.filter {
-            !isSectionComplete($0, completedIDs: beforeCompletedIDs)
-                && isSectionComplete($0, completedIDs: projectedCompletedIDs)
+        let completedPhases = RoutineDayPhase.allCases.filter {
+            !isPhaseComplete($0, completedIDs: beforeCompletedIDs)
+                && isPhaseComplete($0, completedIDs: projectedCompletedIDs)
         }
         let completesFinalTopLevelTask = shouldComplete
             && !topLevelTasks.isEmpty
@@ -767,12 +748,12 @@ private struct TodayView: View {
             )
 
             withAnimation(.snappy) {
-                manuallyExpandedCompletedSectionIDs.subtract(completedSections.map(\.id))
-                collapsedSectionIDs.formUnion(completedSections.map(\.id))
+                manuallyExpandedCompletedPhases.subtract(completedPhases)
+                collapsedPhases.formUnion(completedPhases)
                 if !shouldComplete {
-                    collapsedSectionIDs.subtract(todaySections.filter {
-                        !isSectionComplete($0, completedIDs: projectedCompletedIDs)
-                    }.map(\.id))
+                    collapsedPhases.subtract(RoutineDayPhase.allCases.filter {
+                        !isPhaseComplete($0, completedIDs: projectedCompletedIDs)
+                    })
                 }
             }
 
@@ -780,7 +761,7 @@ private struct TodayView: View {
             if shouldComplete {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
-            if !completedSections.isEmpty {
+            if !completedPhases.isEmpty {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
             }
             if completesFinalTopLevelTask {
@@ -816,16 +797,16 @@ private struct TodayView: View {
         } ?? []
     }
 
-    private func collapseFinishedSections() {
-        let completedSectionIDs = Set(todaySections.filter {
-            isSectionComplete($0)
-        }.map(\.id))
-        manuallyExpandedCompletedSectionIDs.formIntersection(completedSectionIDs)
-        collapsedSectionIDs.formUnion(
-            completedSectionIDs.subtracting(manuallyExpandedCompletedSectionIDs)
+    private func collapseFinishedPhases() {
+        let completedPhases = Set(RoutineDayPhase.allCases.filter {
+            isPhaseComplete($0)
+        })
+        manuallyExpandedCompletedPhases.formIntersection(completedPhases)
+        collapsedPhases.formUnion(
+            completedPhases.subtracting(manuallyExpandedCompletedPhases)
         )
-        collapsedSectionIDs.subtract(
-            Set(todaySections.map(\.id)).subtracting(completedSectionIDs)
+        collapsedPhases.subtract(
+            Set(RoutineDayPhase.allCases).subtracting(completedPhases)
         )
     }
 
@@ -915,9 +896,9 @@ private struct TodayView: View {
             WidgetTimeline.reloadAll()
             withAnimation(.snappy) {
                 undoState = nil
-                collapsedSectionIDs.subtract(todaySections.filter {
-                    !isSectionComplete($0)
-                }.map(\.id))
+                collapsedPhases.subtract(RoutineDayPhase.allCases.filter {
+                    !isPhaseComplete($0)
+                })
             }
         } catch {
             modelContext.rollback()
