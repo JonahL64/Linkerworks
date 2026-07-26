@@ -199,3 +199,10 @@ Streaks compile repair changed `Linkerworks/StreaksView.swift` only.
 The stale removed `DayCompletion` reference at the heatmap cell boundary is gone.
 `swiftc -parse Linkerworks/StreaksView.swift Linkerworks/Domain.swift Linkerworks/Models.swift` and `git diff --check` pass.
 Independent adversarial review found no issue in the one-line repair; full Xcode build remains unavailable on this host.
+
+Sprint 3 Homework core added `Course` and `Assignment` SwiftData models in `Linkerworks/Models.swift`, registered in the existing App Group schema in `Linkerworks/SharedModelContainer.swift`.
+`Linkerworks/HomeworkView.swift` provides Plan-reachable homework, course add/rename/color/reorder/archive management, course filters, grouped deterministic assignment rows, direct completion, swipe postponement/deletion, and progressive editor details.
+`CalendarPlanView.swift` now has a Homework toolbar route; calendar events and Manage Routine remain unchanged.
+Due date is a required model field; the UI represents no due date with an internal `Date.distantFuture` sentinel so no task/progress APIs are affected.
+`LinkerworksTests/HomeworkCoreTests.swift` covers midnight bucketing, default 11:59 PM round-trip, and deterministic tie sorting.
+Validation limitation: neither `swiftc`, `xcodebuild`, nor Git is installed on this Windows host; source-level review completed, but Xcode must run migration/tests and hands-on UI checks.

@@ -26,6 +26,60 @@ enum CompletionRecordState: String, Codable, Sendable {
 }
 
 @Model
+final class Course {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var colorHex: String
+    var term: String
+    var isArchived: Bool
+    var sortOrder: Int
+    var createdAt: Date
+
+    @Relationship(deleteRule: .nullify, inverse: \Assignment.course)
+    var assignments: [Assignment]
+
+    init(id: UUID = UUID(), name: String, colorHex: String, term: String = "", isArchived: Bool = false, sortOrder: Int, createdAt: Date = Date(), assignments: [Assignment] = []) {
+        self.id = id
+        self.name = name
+        self.colorHex = colorHex
+        self.term = term
+        self.isArchived = isArchived
+        self.sortOrder = sortOrder
+        self.createdAt = createdAt
+        self.assignments = assignments
+    }
+}
+
+@Model
+final class Assignment {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var course: Course?
+    var dueDate: Date
+    var usesDefaultTime: Bool
+    var isDone: Bool
+    var completedAt: Date?
+    var notes: String?
+    var sortOrder: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(id: UUID = UUID(), title: String, course: Course? = nil, dueDate: Date, usesDefaultTime: Bool = true, isDone: Bool = false, completedAt: Date? = nil, notes: String? = nil, sortOrder: Int, createdAt: Date = Date(), updatedAt: Date = Date()) {
+        self.id = id
+        self.title = title
+        self.course = course
+        self.dueDate = dueDate
+        self.usesDefaultTime = usesDefaultTime
+        self.isDone = isDone
+        self.completedAt = isDone ? (completedAt ?? Date()) : nil
+        self.notes = notes
+        self.sortOrder = sortOrder
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+@Model
 final class CalendarEvent {
     @Attribute(.unique) var id: UUID
     var title: String

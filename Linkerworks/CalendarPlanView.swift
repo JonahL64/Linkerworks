@@ -45,7 +45,10 @@ struct CalendarPlanView: View {
             .navigationTitle("Plan")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Today") { selectToday() }
+                    HStack {
+                        Button("Today") { selectToday() }
+                        NavigationLink("Homework") { HomeworkView() }
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

@@ -6,6 +6,8 @@ enum SharedModelContainer {
     static let storeFileName = "Linkerworks.store"
 
     static let schema = Schema([
+        Course.self,
+        Assignment.self,
         CalendarEvent.self,
         TaskItem.self,
         Section.self,
