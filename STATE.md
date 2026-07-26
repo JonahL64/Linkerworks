@@ -313,6 +313,12 @@ The helper computes phase label and guidance text before returning its small `VS
 The phase label, “From <guidance>”/“Flexible” text, and section-header control remain unchanged.
 Focused source parsing and diff validation passed; full Xcode compilation still requires macOS Xcode or a Simulator.
 
+Launch-console advisory only; no app files or configuration were changed.
+The reported `CA Event` FirstFramePresentationMetric and ExtendedLaunchMetrics messages are generally Core Animation/Xcode telemetry delivery failures.
+They do not by themselves indicate a Linkerworks crash, persistence error, or UI failure.
+Investigate only if paired with a visible launch hang/crash or an app-specific error, exception, or backtrace.
+No runtime validation was performed in this advisory-only session.
+
 Today DUE TODAY compile repair changed `Linkerworks/ContentView.swift` only.
 The conditional DUE TODAY section is now the dedicated `dueTodaySection` view property, leaving the outer Today list builder with one opaque view expression.
 Its Homework route, overdue count, first-three assignment rows, and remaining-count copy are unchanged.
@@ -324,3 +330,10 @@ Saved-meal and routine-phase branches now render through `savedMealsSection` and
 Together with `dueTodaySection`, the outer Today list builder now contains only simple conditional/helper expressions.
 All quick-log, routine task, sub-step, collapse, and phase-header behavior is preserved inside the extracted views.
 Focused source parsing and diff validation passed; full Xcode compilation still requires macOS Xcode or a Simulator.
+
+Routine phase duplicate-label fix changed `Linkerworks/ContentView.swift` only.
+Today now renders each populated flexible phase once, followed by its applicable routine section controls and tasks.
+Per-section filtering, completion hiding, collapsing, task completion, and lift sub-step expansion are unchanged.
+Independent review found no functional defect; it noted only the absence of an existing UI/snapshot test harness.
+Validation passed: `swiftc -parse Linkerworks/*.swift LinkerworksWidget/*.swift LinkerworksTests/*.swift` and `git diff --check`.
+Full Xcode/device or Simulator visual verification remains unavailable on this machine.

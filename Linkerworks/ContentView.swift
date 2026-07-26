@@ -376,32 +376,44 @@ private struct TodayView: View {
 
     private var routinePhaseSections: some View {
         ForEach(RoutineDayPhase.allCases) { phase in
-            ForEach(todaySections) { section in
-                let phaseTasks = tasks(in: section).filter { $0.routinePhase == phase }
-                if !phaseTasks.isEmpty {
-                    SwiftUI.Section {
-                        if !isSectionCollapsed(section) {
-                            ForEach(phaseTasks) { task in
-                                if !shouldHide(task) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        taskRow(task, isSubstep: false)
+            let phaseSections = todaySections.filter {
+                tasks(in: $0).contains { $0.routinePhase == phase }
+            }
+            if !phaseSections.isEmpty {
+                SwiftUI.Section {
+                    ForEach(phaseSections) { section in
+                        routineSectionRows(section, for: phase)
+                    }
+                } header: {
+                    phaseSectionHeader(phase)
+                }
+            }
+        }
+    }
 
-                                        if expandedLiftParentIDs.contains(task.id) {
-                                            ForEach(children(of: task)) { child in
-                                                if !shouldHide(child) {
-                                                    taskRow(child, isSubstep: true)
-                                                        .padding(.leading, 28)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .padding(.vertical, 4)
+    @ViewBuilder
+    private func routineSectionRows(_ section: Section, for phase: RoutineDayPhase) -> some View {
+        let phaseTasks = tasks(in: section).filter { $0.routinePhase == phase }
+
+        sectionHeader(section)
+            .trainingLogRow()
+
+        if !isSectionCollapsed(section) {
+            ForEach(phaseTasks) { task in
+                if !shouldHide(task) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        taskRow(task, isSubstep: false)
+
+                        if expandedLiftParentIDs.contains(task.id) {
+                            ForEach(children(of: task)) { child in
+                                if !shouldHide(child) {
+                                    taskRow(child, isSubstep: true)
+                                        .padding(.leading, 28)
                                 }
                             }
                         }
-                    } header: {
-                        phaseSectionHeader(phase, section: section)
                     }
+                    .padding(.vertical, 4)
                 }
             }
         }
@@ -443,7 +455,7 @@ private struct TodayView: View {
         .trainingLogRow()
     }
 
-    private func phaseSectionHeader(_ phase: RoutineDayPhase, section: Section) -> some View {
+    private func phaseSectionHeader(_ phase: RoutineDayPhase) -> some View {
         let phaseLabel = RoutinePhasePreferences.label(for: phase)
         let startGuidance = RoutinePhasePreferences.startGuidance(for: phase)
         let guidanceText = startGuidance.map { "From \($0)" } ?? "Flexible"
@@ -454,7 +466,6 @@ private struct TodayView: View {
             Text(guidanceText)
                 .font(.caption)
                 .foregroundStyle(TrainingLogTheme.secondaryText)
-            sectionHeader(section)
         }
     }
 
