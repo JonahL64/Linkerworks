@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4efe4">
+  <title>Linkerworks — A Personal Operating System</title>
+  <style>
+    :root {
+      --paper: #f4efe4;
+      --paper-2: #ebe2d2;
+      --paper-3: #fffaf0;
+      --ink: #172c38;
+      --muted: #667078;
+      --blue: #164a68;
+      --blue-2: #1f6d8c;
+      --red: #a44739;
+      --gold: #c48a2b;
+      --green: #53755c;
+      --violet: #756387;
+      --line: rgba(23, 44, 56, .17);
+      --shadow: 0 18px 50px rgba(33, 38, 37, .11);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 3%, rgba(196, 138, 43, .13), transparent 22rem),
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(23, 44, 56, .032) 31px 32px),
+        var(--paper);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .3;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E");
+      mix-blend-mode: multiply;
+      z-index: 99;
+    }
+
+    a { color: inherit; }
+    button { font: inherit; }
+    .wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+
+    .masthead {
+      min-height: 94vh;
+      display: grid;
+      align-items: center;
+      padding: 56px 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .masthead::after {
+      content: "L";
+      position: absolute;
+      right: -1vw;
+      bottom: -22vh;
+      color: rgba(22, 74, 104, .055);
+      font: 700 min(70vw, 780px)/1 Georgia, serif;
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--red);
+      font-size: .75rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before { content: ""; width: 38px; border-top: 2px solid currentColor; }
+    h1, h2, h3, blockquote { font-family: Georgia, "Times New Roman", serif; }
+    h1 {
+      max-width: 900px;
+      margin: 28px 0 24px;
+      font-size: clamp(4rem, 10vw, 9.2rem);
+      line-height: .82;
+      letter-spacing: -.065em;
+      font-weight: 500;
+    }
+
+    h1 em { color: var(--blue-2); font-weight: 400; }
+    .deck {
+      max-width: 720px;
+      margin: 0;
+      font: 1.35rem/1.55 Georgia, serif;
+      color: #43545c;
+    }
+
+    .hero-footer {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      width: min(680px, 100%);
+      margin-top: 60px;
+      border-top: 1px solid var(--line);
+    }
+
+    .hero-stat { padding: 18px 22px 0 0; }
+    .hero-stat strong { display: block; font: 500 2.4rem/1 Georgia, serif; color: var(--blue); }
+    .hero-stat span { color: var(--muted); font-size: .82rem; }
+
+    .story-nav {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(244, 239, 228, .9);
+      backdrop-filter: blur(16px);
+      border-block: 1px solid var(--line);
+    }
+
+    .story-nav .wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-block: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .story-nav a {
+      flex: none;
+      padding: 8px 13px;
+      border-radius: 999px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: .78rem;
+      transition: .2s ease;
+    }
+
+    .story-nav a:hover, .story-nav a.active {
+      color: var(--paper-3);
+      background: var(--blue);
+    }
+
+    main { overflow: hidden; }
+    .chapter { padding: 110px 0; position: relative; }
+    .chapter-head {
+      display: grid;
+      grid-template-columns: 90px minmax(0, 1fr) minmax(250px, 420px);
+      gap: 26px;
+      align-items: start;
+      margin-bottom: 55px;
+    }
+
+    .chapter-no {
+      font: italic 3.8rem/1 Georgia, serif;
+      color: var(--red);
+      opacity: .65;
+    }
+
+    .chapter h2 {
+      margin: 0;
+      font-size: clamp(2.6rem, 5vw, 5rem);
+      line-height: .95;
+      letter-spacing: -.045em;
+      font-weight: 500;
+    }
+
+    .chapter-intro { margin: 5px 0 0; color: var(--muted); font-size: 1rem; }
+    .idea-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; }
+    .idea {
+      grid-column: span 4;
+      min-height: 210px;
+      padding: 25px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 250, 240, .68);
+      position: relative;
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+
+    .idea:hover { transform: translateY(-4px) rotate(-.25deg); box-shadow: var(--shadow); }
+    .idea.wide { grid-column: span 8; }
+    .idea.tall { min-height: 310px; }
+    .idea .tag {
+      color: var(--red);
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .idea h3 { margin: 42px 0 8px; font-size: 1.45rem; line-height: 1.12; }
+    .idea p { margin: 0; color: var(--muted); font-size: .92rem; }
+    .idea .mark {
+      position: absolute;
+      right: 20px;
+      top: 15px;
+      font: italic 2.2rem Georgia, serif;
+      color: rgba(22, 74, 104, .25);
+    }
+
+    /* Technique 01: blueprint */
+    .blueprint {
+      color: #eef8fb;
+      background-color: #174861;
+      background-image:
+        linear-gradient(rgba(255,255,255,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.055) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .blueprint .chapter-no, .blueprint .chapter-intro { color: #a9cedb; }
+    .blueprint .idea {
+      border-color: rgba(220, 243, 250, .28);
+      background: rgba(4, 35, 52, .55);
+    }
+    .blueprint .idea p { color: #bad1da; }
+    .blueprint .idea .tag { color: #f4c46b; }
+    .blueprint .idea .mark { color: rgba(244, 196, 107, .4); }
+
+    /* Technique 02: warning/inversion */
+    .inversion { background: #e4ddd0; }
+    .inversion .idea { border-radius: 2px; box-shadow: 7px 8px 0 rgba(164, 71, 57, .12); }
+    .inversion .idea::before {
+      content: "FAILURE MODE";
+      position: absolute;
+      top: 0; right: 0;
+      padding: 6px 10px;
+      background: var(--red);
+      color: #fff6e8;
+      font-size: .6rem;
+      letter-spacing: .12em;
+    }
+    .inversion .idea h3 { text-decoration: line-through; text-decoration-color: rgba(164,71,57,.5); }
+    .inversion .idea p::before { content: "Invert → "; color: var(--red); font-weight: 800; }
+
+    /* Technique 03: SCAMPER workshop */
+    .workshop .idea { border-radius: 12px 12px 28px 12px; }
+    .workshop .idea:nth-child(2n) { transform: rotate(.65deg); background: #f4e4b9; }
+    .workshop .idea:nth-child(2n):hover { transform: rotate(.65deg) translateY(-4px); }
+    .verb {
+      display: inline-block;
+      margin-bottom: 20px;
+      padding: 4px 9px;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      color: var(--blue-2);
+      font: italic 1.05rem Georgia, serif;
+    }
+
+    /* Technique 04: matrix */
+    .matrix { background: var(--paper-2); }
+    .matrix-board {
+      display: grid;
+      grid-template-columns: 160px repeat(3, 1fr);
+      border: 1px solid var(--ink);
+      background: var(--paper-3);
+      box-shadow: var(--shadow);
+    }
+    .cell { min-height: 130px; padding: 18px; border: solid var(--line); border-width: 0 1px 1px 0; }
+    .cell.axis { background: var(--ink); color: var(--paper-3); font: 1.05rem Georgia, serif; }
+    .cell.head { min-height: auto; color: var(--red); font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .cell strong { display: block; margin-bottom: 8px; font: 1.15rem Georgia, serif; }
+    .cell small { color: var(--muted); }
+
+    /* Technique 05: borrowed artifacts */
+    .borrowed .idea { overflow: hidden; padding-top: 42px; }
+    .borrowed .idea::after {
+      content: attr(data-source);
+      position: absolute; top: 0; left: 0;
+      padding: 7px 15px;
+      border-radius: 0 0 14px 0;
+      color: white;
+      background: var(--green);
+      font-size: .64rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    /* Technique 06: constraints */
+    .constraints { background: #172c38; color: #f5eee1; }
+    .constraint-list { border-top: 1px solid rgba(255,255,255,.18); }
+    .constraint-row {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      gap: 30px;
+      padding: 25px 0;
+      border-bottom: 1px solid rgba(255,255,255,.18);
+    }
+    .constraint-row b { color: #e0a94f; font: italic 1.1rem Georgia, serif; }
+    .constraint-row p { margin: 0; font: 1.3rem/1.35 Georgia, serif; }
+
+    /* Technique 07: letter */
+    .letter {
+      background:
+        linear-gradient(90deg, transparent 59px, rgba(164,71,57,.22) 59px 61px, transparent 61px),
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(31,109,140,.11) 31px 32px),
+        #fbf6e9;
+    }
+    .letter-sheet {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 70px 72px 60px 95px;
+      background: rgba(255,255,255,.44);
+      box-shadow: var(--shadow);
+      transform: rotate(-.4deg);
+    }
+    .letter-sheet .date { color: var(--muted); text-align: right; }
+    .letter-sheet blockquote { margin: 35px 0; font-size: clamp(1.35rem, 2.6vw, 2rem); line-height: 1.55; }
+    .letter-sheet .sign { font: italic 1.8rem Georgia, serif; color: var(--blue); }
+
+    /* Technique 08: scenarios */
+    .scenarios {
+      color: #f2eadc;
+      background:
+        radial-gradient(circle at 80% 20%, rgba(196,138,43,.19), transparent 18rem),
+        #131b22;
+    }
+    .scenarios .chapter-intro { color: #98a8af; }
+    .scenario-orbit { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .scenario {
+      padding: 28px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      display: grid;
+      grid-template-columns: 55px 1fr;
+      align-items: center;
+      gap: 18px;
+      background: rgba(255,255,255,.035);
+    }
+    .scenario i { font: italic 2rem Georgia, serif; color: #e0a94f; text-align: center; }
+    .scenario p { margin: 0; }
+
+    /* Technique 09: assumptions */
+    .reversal .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .flip {
+      min-height: 280px;
+      padding: 26px;
+      border: 1px solid var(--line);
+      background: var(--paper-3);
+      position: relative;
+      overflow: hidden;
+    }
+    .flip::after {
+      content: "↻";
+      position: absolute; right: -8px; bottom: -32px;
+      font: 8rem Georgia, serif; color: rgba(22,74,104,.08);
+    }
+    .flip del { color: var(--muted); font: 1.2rem Georgia, serif; }
+    .flip strong { display: block; margin-top: 35px; font: 1.6rem/1.2 Georgia, serif; color: var(--blue); }
+
+    /* Technique 10: future artifacts */
+    .future {
+      background: linear-gradient(160deg, #f3ece0 0 45%, #dce7e6 45%);
+    }
+    .timeline { position: relative; display: grid; gap: 16px; }
+    .timeline::before {
+      content: ""; position: absolute; left: 82px; top: 0; bottom: 0;
+      border-left: 2px dashed rgba(22,74,104,.35);
+    }
+    .artifact { display: grid; grid-template-columns: 72px 1fr; gap: 28px; align-items: start; }
+    .year { padding-top: 22px; color: var(--red); font: italic 1.2rem Georgia, serif; text-align: right; }
+    .artifact-card {
+      max-width: 760px;
+      padding: 22px 26px;
+      border: 1px solid rgba(22,74,104,.2);
+      border-radius: 8px;
+      background: rgba(255,255,255,.65);
+      box-shadow: 0 8px 30px rgba(22,74,104,.08);
+    }
+    .artifact-card b { font: 1.35rem Georgia, serif; color: var(--blue); }
+    .artifact-card p { margin: 5px 0 0; color: var(--muted); }
+
+    /* Convergence */
+    .convergence {
+      min-height: 100vh;
+      padding: 130px 0;
+      color: #f7f1e7;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(31,109,140,.6), transparent 28rem),
+        #0f222d;
+    }
+    .convergence .eyebrow { color: #e0a94f; }
+    .thesis {
+      max-width: 970px;
+      margin: 35px 0 80px;
+      font: 500 clamp(2.7rem, 6.5vw, 6.7rem)/.96 Georgia, serif;
+      letter-spacing: -.05em;
+    }
+    .thesis em { color: #82b6c5; font-weight: 400; }
+    .loops {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-bottom: 100px;
+    }
+    .loop {
+      min-height: 255px;
+      padding: 28px;
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 50%;
+      display: grid;
+      place-content: center;
+      text-align: center;
+    }
+    .loop span { color: #e0a94f; font-size: .7rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .loop strong { display: block; margin: 9px 0; font: 2rem Georgia, serif; }
+    .loop small { color: #abc1ca; }
+
+    .roadmap { counter-reset: phase; border-top: 1px solid rgba(255,255,255,.22); }
+    .phase {
+      counter-increment: phase;
+      display: grid;
+      grid-template-columns: 100px 230px 1fr;
+      gap: 25px;
+      padding: 34px 0;
+      border-bottom: 1px solid rgba(255,255,255,.22);
+    }
+    .phase::before { content: "0" counter(phase); color: #e0a94f; font: italic 2rem Georgia, serif; }
+    .phase h3 { margin: 0; font-size: 1.5rem; font-weight: 500; }
+    .phase p { margin: 0; color: #abc1ca; }
+    .phase.foundation { background: linear-gradient(90deg, rgba(196,138,43,.08), transparent); }
+    .after {
+      margin: 70px 0 0 125px;
+      max-width: 730px;
+      padding-left: 24px;
+      border-left: 3px solid #e0a94f;
+      color: #abc1ca;
+    }
+    .after strong { color: #f7f1e7; }
+
+    footer { padding: 70px 0; background: #0a1921; color: #94aab3; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 30px; align-items: end; }
+    footer strong { color: #f7f1e7; font: 1.4rem Georgia, serif; }
+    footer small { max-width: 520px; text-align: right; }
+
+    .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    @media (max-width: 850px) {
+      .chapter-head { grid-template-columns: 62px 1fr; }
+      .chapter-intro { grid-column: 2; }
+      .idea, .idea.wide { grid-column: span 6; }
+      .matrix-board { grid-template-columns: 105px repeat(3, 1fr); font-size: .8rem; }
+      .loops { grid-template-columns: 1fr; }
+      .loop { border-radius: var(--radius); min-height: 190px; }
+      .phase { grid-template-columns: 70px 1fr; }
+      .phase p { grid-column: 2; }
+    }
+
+    @media (max-width: 620px) {
+      .wrap { width: min(100% - 26px, 1180px); }
+      .masthead { min-height: 86vh; }
+      h1 { font-size: clamp(3.5rem, 18vw, 5.2rem); }
+      .hero-footer { grid-template-columns: 1fr; }
+      .hero-stat { display: flex; align-items: baseline; gap: 12px; }
+      .chapter { padding: 82px 0; }
+      .chapter-head { grid-template-columns: 1fr; }
+      .chapter-no { font-size: 2rem; }
+      .chapter-intro { grid-column: auto; }
+      .idea, .idea.wide { grid-column: span 12; }
+      .matrix-board { grid-template-columns: 90px 1fr; overflow: hidden; }
+      .matrix-board .head:nth-child(n+3), .matrix-board .cell:nth-child(4n+3), .matrix-board .cell:nth-child(4n+4) { display: none; }
+      .constraint-row { grid-template-columns: 1fr; gap: 7px; }
+      .letter-sheet { padding: 48px 28px 45px 50px; }
+      .scenario-orbit, .reversal .cards { grid-template-columns: 1fr; }
+      .scenario { border-radius: 24px; }
+      .phase { grid-template-columns: 50px 1fr; }
+      .after { margin-left: 0; }
+      footer .wrap { display: block; }
+      footer small { display: block; margin-top: 18px; text-align: left; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead" id="top">
+    <div class="wrap">
+      <div class="eyebrow">Linkerworks field notes · 26 July 2026</div>
+      <h1>A personal<br><em>operating system.</em></h1>
+      <p class="deck">A brainstorming expedition about bringing a life into one coherent rhythm—without turning every part of it into another tracker.</p>
+      <div class="hero-footer" aria-label="Session summary">
+        <div class="hero-stat"><strong>110</strong><span>ideas generated</span></div>
+        <div class="hero-stat"><strong>10</strong><span>creative lenses</span></div>
+        <div class="hero-stat"><strong>1</strong><span>converged direction</span></div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="story-nav" aria-label="Brainstorm chapters">
+    <div class="wrap">
+      <a href="#principles">Principles</a><a href="#reverse">Reverse</a><a href="#scamper">SCAMPER</a>
+      <a href="#morphology">Morphology</a><a href="#cross">Cross-pollination</a><a href="#constraints">Constraints</a>
+      <a href="#future-self">Future self</a><a href="#what-if">What if</a><a href="#reversal">Reversal</a>
+      <a href="#artifacts">Artifacts</a><a href="#convergence">Roadmap</a>
+    </div>
+  </nav>
+
+  <main>
+    <section class="chapter blueprint" id="principles">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">01</div>
+          <h2>Draw the load-bearing lines.</h2>
+          <p class="chapter-intro">First Principles Thinking asked what a personal operating system must do before it earns any new specialist feature.</p>
+        </div>
+        <div class="idea-grid">
+          <article class="idea wide reveal"><span class="tag">The front door</span><span class="mark">⌁</span><h3>A universal capture inbox</h3><p>Any task, event, assignment, note, meal idea, or workout thought begins in one neutral place, then gets classified later.</p></article>
+          <article class="idea reveal"><span class="tag">The connective tissue</span><span class="mark">◎</span><h3>Areas, Projects, Goals</h3><p>Health, School, Career, Home, Money, and Relationships become stable context. Projects organize finite outcomes; goals hold slower change.</p></article>
+          <article class="idea reveal"><span class="tag">The daily surface</span><span class="mark">☀</span><h3>One Today brief</h3><p>Routine tasks, due assignments, active workout, calendar agenda, and one chosen goal focus become a coherent opening view.</p></article>
+          <article class="idea reveal"><span class="tag">The weekly rhythm</span><span class="mark">↻</span><h3>A guided review</h3><p>What changed? What slipped? What is blocked? What should actually be scheduled next?</p></article>
+          <article class="idea reveal"><span class="tag">The memory</span><span class="mark">≋</span><h3>Search and activity timeline</h3><p>Find anything, then see what was planned, completed, skipped, logged, or changed on any day.</p></article>
+          <article class="idea wide reveal"><span class="tag">The trust contract</span><span class="mark">◇</span><h3>Readable export and verified restore</h3><p>Before the app becomes home to irreplaceable life data, it must prove that data can leave—and return—through durable JSON and CSV.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter inversion" id="reverse">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">02</div>
+          <h2>Design the failure. Then turn it around.</h2>
+          <p class="chapter-intro">Reverse Brainstorming exposed the fastest ways to ruin trust, truth, and usability.</p>
+        </div>
+        <div class="idea-grid">
+          <article class="idea reveal"><h3>A top-level tracker for every interest</h3><p>Organize additions under a few stable Areas.</p></article>
+          <article class="idea reveal"><h3>Trap all data in SwiftData</h3><p>One-tap export, restore rehearsal, readable archives.</p></article>
+          <article class="idea reveal"><h3>Require a full form for every thought</h3><p>Inbox-first capture and progressive detail.</p></article>
+          <article class="idea reveal"><h3>Recompute the past from today’s plan</h3><p>Snapshot every schedule-sensitive metric.</p></article>
+          <article class="idea reveal"><h3>Make every miss a failure</h3><p>Skip, defer, renegotiate, and explain.</p></article>
+          <article class="idea reveal"><h3>Call parsing a release test</h3><p>A real shared test scheme and device acceptance checklist.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter workshop" id="scamper">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">03</div>
+          <h2>Cut, combine, adapt, reverse.</h2>
+          <p class="chapter-intro">SCAMPER treated existing Linkerworks patterns as raw material—not constraints on imagination.</p>
+        </div>
+        <div class="idea-grid">
+          <article class="idea reveal"><span class="verb">Substitute</span><h3>Capture now, classify later</h3><p>Replace category selection with a neutral inbox item that can be promoted when context is available.</p></article>
+          <article class="idea reveal"><span class="verb">Combine</span><h3>One agenda, distinct semantics</h3><p>Events and assignments can share a view without pretending due and completion mean the same thing.</p></article>
+          <article class="idea reveal"><span class="verb">Adapt</span><h3>Quick capture presets</h3><p>Extend saved-meal convenience to events, assignments, and journal prompts.</p></article>
+          <article class="idea reveal"><span class="verb">Modify</span><h3>A three-outcome Focus strip</h3><p>Place a compact, manually chosen set above routine work in Today.</p></article>
+          <article class="idea reveal"><span class="verb">Eliminate</span><h3>Retire duplicate tracker roots</h3><p>Let each Area own its references, logs, goals, and review metrics.</p></article>
+          <article class="idea reveal"><span class="verb">Reverse</span><h3>Plan from capacity</h3><p>Start with available time and energy rather than forcing every desire into a date.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter matrix" id="morphology">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">04</div>
+          <h2>Map the possibility space.</h2>
+          <p class="chapter-intro">Morphological Analysis separated the system into dimensions, revealing how a small shared model could yield many useful views.</p>
+        </div>
+        <div class="matrix-board reveal" role="table" aria-label="Morphological analysis">
+          <div class="cell axis"></div><div class="cell head">Immediate</div><div class="cell head">Planning</div><div class="cell head">Reflection</div>
+          <div class="cell axis">Capture mode</div><div class="cell"><strong>Text · timestamp</strong><small>Fast, one-thumb entry</small></div><div class="cell"><strong>Checklist · duration</strong><small>Shape the work</small></div><div class="cell"><strong>Rating · note</strong><small>Preserve context</small></div>
+          <div class="cell axis">Horizon</div><div class="cell"><strong>Now · Today</strong><small>The next possible action</small></div><div class="cell"><strong>Week · Month</strong><small>Real commitments</small></div><div class="cell"><strong>Someday · Archive</strong><small>Possibility and memory</small></div>
+          <div class="cell axis">Context</div><div class="cell"><strong>Place</strong><small>Home, Campus, Gym</small></div><div class="cell"><strong>Capacity</strong><small>Time and energy</small></div><div class="cell"><strong>Area</strong><small>Health, School, Career</small></div>
+          <div class="cell axis">Evidence</div><div class="cell"><strong>Completion</strong><small>Something happened</small></div><div class="cell"><strong>Quantity · duration</strong><small>How much happened</small></div><div class="cell"><strong>Linked record</strong><small>Why it mattered</small></div>
+          <div class="cell axis">View</div><div class="cell"><strong>List · agenda</strong><small>Act</small></div><div class="cell"><strong>Board · calendar</strong><small>Arrange</small></div><div class="cell"><strong>Timeline · trend</strong><small>Understand</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter borrowed" id="cross">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">05</div>
+          <h2>Borrow wisdom from other worlds.</h2>
+          <p class="chapter-intro">Cross-Pollination imported proven mental models, then translated them into humane personal tools.</p>
+        </div>
+        <div class="idea-grid">
+          <article class="idea reveal" data-source="Hospital triage"><h3>Review, then prioritize</h3><p>An inbox item receives urgency, importance, and a next action only when reviewed—not while capturing.</p></article>
+          <article class="idea reveal" data-source="Accounting ledgers"><h3>An honest mutation trail</h3><p>Meaningful changes append lightweight audit events, making history and undo trustworthy.</p></article>
+          <article class="idea reveal" data-source="Git branching"><h3>Scenario planning</h3><p>Duplicate a plan into a safe possibility before applying changes to the live week.</p></article>
+          <article class="idea reveal" data-source="Game save slots"><h3>Backup before the leap</h3><p>Create explicit local snapshots before migrations or large bulk edits.</p></article>
+          <article class="idea reveal" data-source="Newsrooms"><h3>The morning meeting</h3><p>A concise brief: deadlines, conflicts, exceptions, and one decision needed.</p></article>
+          <article class="idea reveal" data-source="Coaching"><h3>Periodize ambition</h3><p>Goals move through build, maintain, deload, and recovery instead of demanding constant maximum effort.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter constraints" id="constraints">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">06</div>
+          <h2>The edges sharpen the product.</h2>
+          <p class="chapter-intro">Constraint Mapping turned local-only, single-user, iPhone-first, and finite maintenance time into decisive product principles.</p>
+        </div>
+        <div class="constraint-list">
+          <div class="constraint-row reveal"><b>Because it is local-only</b><p>Files export and import become the primary portability story—not an afterthought.</p></div>
+          <div class="constraint-row reveal"><b>Because it is single-user</b><p>Terminology, defaults, and views can fit Jonah’s mental model instead of generic collaboration roles.</p></div>
+          <div class="constraint-row reveal"><b>Because there are no notifications</b><p>Approaching items surface in widgets, Today, and a deliberate morning review.</p></div>
+          <div class="constraint-row reveal"><b>Because iPhone is primary</b><p>Fast capture, one-thumb actions, and short loops outrank dense planning screens.</p></div>
+          <div class="constraint-row reveal"><b>Because privacy is central</b><p>Local app lock and sensitive widget redaction become natural safeguards.</p></div>
+          <div class="constraint-row reveal"><b>Because maintenance is finite</b><p>A new module must improve Today or Review before it earns a standalone screen.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter letter" id="future-self">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">07</div>
+          <h2>A letter from the person who kept using it.</h2>
+          <p class="chapter-intro">The Future Self Interview shifted the value proposition from perfect tracking to durable, meaningful memory.</p>
+        </div>
+        <article class="letter-sheet reveal">
+          <div class="date">Some year after the checkmarks stopped feeling urgent</div>
+          <blockquote>
+            Dear present Jonah,<br><br>
+            I don’t need a perfect archive of tiny completions. I need to find the decisions that changed things—and remember why I made them.<br><br>
+            Give me annual summaries of what I tried, finished, learned, enjoyed, and chose to stop. Let me compare plans with reality. Preserve the seasons: semesters, jobs, injuries, certifications, moves.<br><br>
+            Keep exports readable even if Linkerworks no longer compiles. Save the highlights too, so the archive carries feeling, not only evidence. And when a goal ends, package its outcomes, lessons, and reusable patterns instead of burying it.
+          </blockquote>
+          <div class="sign">— Future Jonah</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="chapter scenarios" id="what-if">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">08</div>
+          <h2>Remove the defaults. What survives?</h2>
+          <p class="chapter-intro">What If Scenarios stripped away familiar surfaces to expose what the system is actually for.</p>
+        </div>
+        <div class="scenario-orbit">
+          <article class="scenario reveal"><i>?</i><p><strong>If Today showed only one item:</strong> choose the best next action from deadlines, focus, context, and energy.</p></article>
+          <article class="scenario reveal"><i>?</i><p><strong>If the calendar vanished:</strong> let weekly review and horizon buckets drive planning without false precision.</p></article>
+          <article class="scenario reveal"><i>?</i><p><strong>If streaks vanished:</strong> show consistency range, trend direction, and recovery after disruption.</p></article>
+          <article class="scenario reveal"><i>?</i><p><strong>If the phone vanished today:</strong> make portable encrypted backup the first feature, not housekeeping.</p></article>
+          <article class="scenario reveal"><i>?</i><p><strong>If school ended tomorrow:</strong> hide Homework cleanly and preserve it as an archived life chapter.</p></article>
+          <article class="scenario reveal"><i>?</i><p><strong>If planning took ten minutes weekly:</strong> guide a queue toward a realistic week and an empty inbox.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter reversal" id="reversal">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">09</div>
+          <h2>Turn the assumptions over.</h2>
+          <p class="chapter-intro">Assumption Reversal made the product gentler, truer, and more selective.</p>
+        </div>
+        <div class="cards">
+          <article class="flip reveal"><del>Everything belongs in Linkerworks.</del><strong>Keep links and summaries for specialist systems that should remain elsewhere.</strong></article>
+          <article class="flip reveal"><del>Dates are convenient defaults.</del><strong>Dates are commitments; unscheduled actions stay separate from events.</strong></article>
+          <article class="flip reveal"><del>Completion always means success.</del><strong>Outcomes may be learned, canceled, delegated, or no longer relevant.</strong></article>
+          <article class="flip reveal"><del>More tracking creates more insight.</del><strong>Give metrics a budget—and ask what decision each one changes.</strong></article>
+          <article class="flip reveal"><del>A weekly plan fills capacity.</del><strong>A trustworthy week visibly protects buffer.</strong></article>
+          <article class="flip reveal"><del>Centralization means one database.</del><strong>Centralization means one review loop with deep links.</strong></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter future" id="artifacts">
+      <div class="wrap">
+        <div class="chapter-head reveal">
+          <div class="chapter-no">10</div>
+          <h2>Artifacts sent back from the future.</h2>
+          <p class="chapter-intro">Sci-Fi Artifact From the Future made the abstract system tangible—things a future version of Linkerworks might place in Jonah’s hand.</p>
+        </div>
+        <div class="timeline">
+          <div class="artifact reveal"><div class="year">2028</div><article class="artifact-card"><b>The Morning Card</b><p>Two commitments, one conflict, one overdue item, and the single choice that unlocks the day.</p></article></div>
+          <div class="artifact reveal"><div class="year">2028</div><article class="artifact-card"><b>The Weekly Reset receipt</b><p>What was carried forward, dropped, delegated, and deliberately protected as buffer.</p></article></div>
+          <div class="artifact reveal"><div class="year">2029</div><article class="artifact-card"><b>Recovery Mode</b><p>Performance targets soften into minimum viable routines and a gentle review.</p></article></div>
+          <div class="artifact reveal"><div class="year">2030</div><article class="artifact-card"><b>The Decision Capsule</b><p>A six-month-old prediction reopens and asks: what actually happened?</p></article></div>
+          <div class="artifact reveal"><div class="year">2031</div><article class="artifact-card"><b>The Season Planner</b><p>A semester, training block, trip, or job search activates as one coherent package.</p></article></div>
+          <div class="artifact reveal"><div class="year">2033</div><article class="artifact-card"><b>The Annual Letter</b><p>What Jonah tried, finished, learned, enjoyed, and chose to stop.</p></article></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="convergence" id="convergence">
+      <div class="wrap">
+        <div class="eyebrow reveal">Impact–Effort convergence</div>
+        <div class="thesis reveal">Centralization is not owning every byte. It is <em>one capture loop, one linking model, and one review loop.</em></div>
+
+        <div class="loops">
+          <div class="loop reveal"><div><span>Begin anywhere</span><strong>Capture</strong><small>Fast, neutral, forgiving</small></div></div>
+          <div class="loop reveal"><div><span>Create meaning</span><strong>Connect</strong><small>Areas, projects, goals, native records</small></div></div>
+          <div class="loop reveal"><div><span>Choose honestly</span><strong>Review</strong><small>Today, weekly reset, durable history</small></div></div>
+        </div>
+
+        <div class="eyebrow reveal">The build order</div>
+        <div class="roadmap">
+          <article class="phase foundation reveal"><h3>Foundation first</h3><p>Verified build and test, aligned iOS target, versioned migrations, consistent save errors, and export/restore. Trust precedes expansion.</p></article>
+          <article class="phase reveal"><h3>Open the front door</h3><p>Universal Inbox, global search, and destination-specific deep links. Capture becomes fast; retrieval becomes certain.</p></article>
+          <article class="phase reveal"><h3>Add the operating layer</h3><p>Areas, Projects, Goals, and lightweight links to tasks, events, assignments, certifications, workouts, and logs.</p></article>
+          <article class="phase reveal"><h3>Establish the rhythm</h3><p>A focused Today brief, guided weekly review, reusable templates, and planned exception modes for real life.</p></article>
+        </div>
+
+        <p class="after reveal"><strong>Only then:</strong> consider journal, mood, sleep metrics, finances, household inventory, relationship follow-ups, or experiments. A specialist module earns its place by strengthening the shared operating layer—not by adding another island.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <strong>Linkerworks turns intentions into today’s actions—and preserves an honest personal record.</strong>
+      <small>Autonomous brainstorming session · Centralizing personal planning and tracking in Linkerworks · 110 ideas across 10 generative techniques</small>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reveals = document.querySelectorAll(".reveal");
+      if (reduceMotion || !("IntersectionObserver" in window)) {
+        reveals.forEach(el => el.classList.add("visible"));
+      } else {
+        const revealObserver = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: .12 });
+        reveals.forEach(el => revealObserver.observe(el));
+      }
+
+      const links = [...document.querySelectorAll(".story-nav a")];
+      const sections = links.map(link => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+      const navObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          links.forEach(link => link.classList.toggle("active", link.getAttribute("href") === `#${entry.target.id}`));
+          const active = links.find(link => link.classList.contains("active"));
+          active?.scrollIntoView({ block: "nearest", inline: "center", behavior: reduceMotion ? "auto" : "smooth" });
+        });
+      }, { rootMargin: "-35% 0px -58% 0px" });
+      sections.forEach(section => navObserver.observe(section));
+    })();
+  </script>
+</body>
+</html>

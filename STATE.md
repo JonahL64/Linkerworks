@@ -218,6 +218,12 @@ Validation limitation: neither `swiftc`, `xcodebuild`, nor Git is installed on t
 Sprint 4 Homework integration changed `CalendarPlanView.swift`, `ContentView.swift`, and `HomeworkView.swift`; no SwiftData schema or routine-progress code changed.
 Plan month cells now show the existing circular event marker plus a separate horizontal assignment-due marker, and selected-day agendas append unfinished due assignments after deterministically sorted all-day/timed events.
 Today now has a DUE TODAY strip above routine sections with the first three unfinished due assignments, overdue count, inline completion, and a header route to Homework.
+
+Operational data-retention review only; no app source, model, project, seed, or asset files changed.
+All user data is stored in `Linkerworks.store` in the shared `group.com.jonah.linkerworks` App Group container.
+An in-place update that retains the same app identity, signing/App Group entitlement, and installed app preserves that store and the shared seed-import marker.
+Deleting the app first, changing its bundle/signing group identity, or installing as a distinct app can create/remove the container and cause the app to start with freshly seeded data.
+No export/backup/restore UI currently exists, so device backup is the only practical recovery path for accidental deletion.
 Homework has Select mode with bulk mark-done, push-due-date-one-day, and course reassignment actions; its empty state now says “Nothing due. Enjoy it.”
 `LinkerworksTests/HomeworkCoreTests.swift` includes a regression asserting byte-identical routine completion output with assignments present; assignments remain outside the ring, snapshots, streaks, and heatmap inputs.
 Validation remains limited on this Windows host: `swiftc` and Git are unavailable, so full Xcode test/build and runtime interaction verification are still required.
@@ -352,3 +358,12 @@ Each phase header reports its own completion total, exposes an accessible expand
 Task order, hide-completed filtering, completion changes, auto-collapse after finishing, undo reopening, and lift sub-step expansion all now use phase-level groups.
 Independent review found no functional regression in task order, completion, collapse, hide-completed behavior, or accessibility.
 Validation passed: `swiftc -parse Linkerworks/*.swift LinkerworksWidget/*.swift LinkerworksTests/*.swift` and `git diff --check`.
+
+Product completeness audit only; no app source, model, project, seed, or widget files were changed.
+The original routine/tracker/widget scope is implemented, but the app is not release-ready without a full Xcode build, XCTest run, migration check, and device acceptance pass.
+Static validation passed for app, widget, and test Swift sources; `xcodebuild` remains blocked because the active developer directory contains Command Line Tools only.
+The project targets iOS 26.5 despite the repository contract naming iOS 17, and the shared app scheme has an empty Test action even though `LinkerworksTests` exists.
+Sprint 11 is incomplete against its own acceptance criteria: Plan ships month plus selected-day agenda, but no Week or Day views.
+Hardening gaps include portable export/restore, explicit schema migration planning, recoverable launch failures, consistent save-error handling, destination-specific deep links, and remaining design-token violations.
+Recommended centralization sequence: harden data safety first, then add a universal Inbox and search, Areas/Projects/Goals linking, a unified daily brief/weekly review, and recurrence/templates.
+The autonomous feature brainstorm and HTML keepsake live in `_bmad-output/brainstorming/brainstorm-personal-planning-centralization-2026-07-26/`.
