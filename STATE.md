@@ -283,3 +283,6 @@ Widget projection now orders overdue timed tasks, upcoming timed tasks, then unt
 Routine-management, assignment, and course writes now reload both widget kinds after successful saves; unavailable, neutral, Day complete, deep-link, and hourly/midnight refresh behavior remains.
 `LinkerworksTests/WidgetProjectionTests.swift` covers ordering, no-due assignment exclusion, and lift-parent completion records.
 Validation passed: target-separated `swiftc -parse` and `git diff --check`; full Xcode build, XCTest execution, and device/Simulator widget interaction verification remain required on this Windows host.
+
+Compile repair: `LinkerworksWidget/LinkerworksWidget.swift` now imports `AppIntents` for its interactive routine-completion widget buttons.
+This enables SwiftUI's `Button(intent:label:)` initializer; no widget action, data, or layout behavior changed.
