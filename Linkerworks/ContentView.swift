@@ -284,7 +284,7 @@ private struct TodayView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(RoutinePhasePreferences.label(for: phase))
                                         .trainingLogSectionLabel()
-                                    Text(RoutinePhasePreferences.startGuidance(for: phase).map { "From \($0)" } ?? "Flexible")
+                                    Text(phaseStartGuidanceText(for: phase))
                                         .font(.caption)
                                         .foregroundStyle(TrainingLogTheme.secondaryText)
                                     sectionHeader(section)
@@ -436,6 +436,11 @@ private struct TodayView: View {
             .accessibilityLabel(assignment.isDone ? "Mark \(assignment.title) incomplete" : "Mark \(assignment.title) complete")
         }
         .trainingLogRow()
+    }
+
+    private func phaseStartGuidanceText(for phase: RoutineDayPhase) -> String {
+        let startGuidance = RoutinePhasePreferences.startGuidance(for: phase)
+        return startGuidance.map { "From \($0)" } ?? "Flexible"
     }
 
     private func tasks(in section: Section) -> [TaskItem] {

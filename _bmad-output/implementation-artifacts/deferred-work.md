@@ -13,3 +13,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-fix-manage-taskitem-argument-order.md`
   summary: Add Xcode-backed persistence and UI coverage for creating phased tasks and lift sub-steps.
   evidence: The compiler repair is source-parsed, but this host has only Command Line Tools and cannot run the app-target build or interaction tests.
+- source_spec: `_bmad-output/implementation-artifacts/spec-fix-today-phase-guidance-typecheck.md`
+  summary: Add Xcode-backed and UI coverage for Today phase-guidance formatting.
+  evidence: This host has Command Line Tools only, so the extracted SwiftUI helper cannot be app-target type-checked or visually exercised here.

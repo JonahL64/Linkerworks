@@ -300,3 +300,9 @@ Both new `TaskItem` creation calls now pass `routinePhase` before `detail`, matc
 This resolves the two reported Xcode argument-order errors; no model, persistence, or UI structure changed.
 Focused validation passed: `swiftc -parse Linkerworks/ManageView.swift Linkerworks/Models.swift` and `git diff --check`.
 Full Xcode build and interaction verification still require macOS Xcode or a Simulator.
+
+Today compile repair changed `Linkerworks/ContentView.swift` only.
+The phase header now receives a precomputed guidance string from `phaseStartGuidanceText(for:)`.
+This moves optional guidance formatting out of the SwiftUI `Text` expression identified by Xcode.
+The displayed wording remains “From <guidance>” or “Flexible”; no model, persistence, or UI structure changed.
+Focused source parsing and diff validation passed; full Xcode build still requires macOS Xcode or a Simulator.
