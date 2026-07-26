@@ -12,6 +12,7 @@ struct NutritionView: View {
     @State private var isPresentingEntryEditor = false
     @State private var entryToEdit: MealEntry?
     @State private var isPresentingTargetEditor = false
+    @State private var isPresentingSavedMealManager = false
     @State private var saveErrorMessage: String?
 
     private let calendar = Calendar.current
@@ -37,6 +38,7 @@ struct NutritionView: View {
         List {
             dateSection
             totalSection
+            recentSection
             savedMealsSection
             SwiftUI.Section {
                 NavigationLink {
@@ -56,10 +58,13 @@ struct NutritionView: View {
         .onAppear(perform: ensureDefaultTarget)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    isPresentingTargetEditor = true
+                Menu {
+                    Button("Targets", systemImage: "target") { isPresentingTargetEditor = true }
+                    Button("Manage Saved Meals", systemImage: "slider.horizontal.3") { isPresentingSavedMealManager = true }
+                    Button("Copy Yesterday", systemImage: "doc.on.doc") { copyYesterday() }
+                        .disabled(entriesForYesterday.isEmpty)
                 } label: {
-                    Label("Targets", systemImage: "target")
+                    Image(systemName: "ellipsis.circle")
                 }
             }
 
@@ -82,6 +87,7 @@ struct NutritionView: View {
         .sheet(isPresented: $isPresentingTargetEditor) {
             MacroTargetEditorView(target: macroTargets.first { $0.key == DailyMacroTarget.singletonKey })
         }
+        .sheet(isPresented: $isPresentingSavedMealManager) { SavedMealManagerView() }
         .alert("Unable to Save", isPresented: Binding(
             get: { saveErrorMessage != nil },
             set: { if !$0 { saveErrorMessage = nil } }
@@ -109,13 +115,50 @@ struct NutritionView: View {
         }
     }
 
+    private var entriesForYesterday: [MealEntry] {
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: selectedDate) else { return [] }
+        return mealEntries.filter { calendar.isDate($0.date, inSameDayAs: yesterday) }
+    }
+
+    private var recentEntries: [MealEntry] {
+        var seen = Set<String>()
+        return mealEntries.sorted { $0.createdAt > $1.createdAt }.filter { entry in
+            let key = "\(entry.mealCategoryRawValue)|\(entry.foodName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())"
+            return seen.insert(key).inserted
+        }.prefix(10).map { $0 }
+    }
+
+    @ViewBuilder private var recentSection: some View {
+        if !recentEntries.isEmpty {
+            SwiftUI.Section("Recent") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(recentEntries) { entry in
+                            Button { quickLog(entry) } label: {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(entry.foodName).lineLimit(1)
+                                    Text("\(entry.calories) kcal · \(entry.mealCategory.displayName)")
+                                        .font(.caption).monospacedDigit()
+                                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                                }
+                                .frame(width: 150, alignment: .leading)
+                                .padding(10).background(TrainingLogTheme.quietFill, in: RoundedRectangle(cornerRadius: 8))
+                            }.buttonStyle(.plain)
+                        }
+                    }
+                }.padding(.vertical, 3)
+            }
+        }
+    }
+
     @ViewBuilder
     private var savedMealsSection: some View {
         if !savedMeals.isEmpty {
             SwiftUI.Section("Saved Meals") {
                 ForEach(savedMeals) { meal in
+                    HStack {
                     Button {
-                        quickLog(meal)
+                        quickLog(meal, multiplier: 1)
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(meal.foodName)
@@ -126,6 +169,13 @@ struct NutritionView: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    Spacer()
+                    Menu("×1") {
+                        Button("×1") { quickLog(meal, multiplier: 1) }
+                        Button("×1.5") { quickLog(meal, multiplier: 1.5) }
+                        Button("×2") { quickLog(meal, multiplier: 2) }
+                    }.font(.caption.monospacedDigit())
+                    }
                     .trainingLogRow()
                     .accessibilityLabel("Log \(meal.foodName) for \(selectedDate.formatted(date: .long, time: .omitted))")
                 }
@@ -218,7 +268,7 @@ struct NutritionView: View {
         return saveContext()
     }
 
-    private func quickLog(_ meal: SavedMeal) {
+    private func quickLog(_ meal: SavedMeal, multiplier: Double = 1) {
         let sortOrder = mealEntries
             .filter { calendar.isDate($0.date, inSameDayAs: selectedDate) }
             .filter { $0.mealCategory == meal.mealCategory }
@@ -229,13 +279,28 @@ struct NutritionView: View {
             date: selectedDate,
             mealCategory: meal.mealCategory,
             foodName: meal.foodName,
-            calories: meal.calories,
-            proteinGrams: meal.proteinGrams,
-            carbohydrateGrams: meal.carbohydrateGrams,
-            fatGrams: meal.fatGrams,
-            fiberGrams: meal.fiberGrams,
+            calories: scaled(meal.calories, by: multiplier),
+            proteinGrams: scaled(meal.proteinGrams, by: multiplier),
+            carbohydrateGrams: scaled(meal.carbohydrateGrams, by: multiplier),
+            fatGrams: scaled(meal.fatGrams, by: multiplier),
+            fiberGrams: scaled(meal.fiberGrams, by: multiplier),
             sortOrder: sortOrder
         ))
+        _ = saveContext()
+    }
+
+    private func quickLog(_ entry: MealEntry) {
+        let clone = SavedMeal(mealCategory: entry.mealCategory, foodName: entry.foodName, calories: entry.calories, proteinGrams: entry.proteinGrams, carbohydrateGrams: entry.carbohydrateGrams, fatGrams: entry.fatGrams, fiberGrams: entry.fiberGrams, sortOrder: 0)
+        quickLog(clone)
+    }
+
+    private func scaled(_ value: Int, by multiplier: Double) -> Int { Int((Double(value) * multiplier).rounded()) }
+
+    private func copyYesterday() {
+        for entry in entriesForYesterday.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+            let order = mealEntries.filter { calendar.isDate($0.date, inSameDayAs: selectedDate) && $0.mealCategory == entry.mealCategory }.map(\.sortOrder).max().map { $0 + 1 } ?? 0
+            modelContext.insert(MealEntry(date: selectedDate, mealCategory: entry.mealCategory, foodName: entry.foodName, calories: entry.calories, proteinGrams: entry.proteinGrams, carbohydrateGrams: entry.carbohydrateGrams, fatGrams: entry.fatGrams, fiberGrams: entry.fiberGrams, sortOrder: order))
+        }
         _ = saveContext()
     }
 
@@ -302,13 +367,91 @@ private struct NutritionSummaryRow: View {
             Text(label)
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(logged) / \(target) \(unit)")
+                Text("\(logged) / \(target) \(unit)  ·  \(max(0, target - logged)) left")
                     .monospacedDigit()
                 Text(status)
                     .font(.caption)
                     .foregroundStyle(TrainingLogTheme.secondaryText)
             }
         }
+    }
+}
+
+@MainActor
+private struct SavedMealManagerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \SavedMeal.sortOrder) private var meals: [SavedMeal]
+    @State private var editingMeal: SavedMeal?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(meals) { meal in
+                    Button { editingMeal = meal } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(meal.foodName)
+                            Text("\(meal.mealCategory.displayName) · \(meal.calories) kcal · P \(meal.proteinGrams)g · C \(meal.carbohydrateGrams)g · F \(meal.fatGrams)g · Fiber \(meal.fiberGrams)g")
+                                .font(.caption).monospacedDigit().foregroundStyle(TrainingLogTheme.secondaryText)
+                        }
+                    }.buttonStyle(.plain).trainingLogRow()
+                }
+                .onDelete { offsets in
+                    offsets.map { meals[$0] }.forEach(modelContext.delete)
+                    try? modelContext.save()
+                }
+                .onMove { source, destination in
+                    var reordered = meals
+                    reordered.move(fromOffsets: source, toOffset: destination)
+                    for (index, meal) in reordered.enumerated() { meal.sortOrder = index }
+                    try? modelContext.save()
+                }
+            }
+            .trainingLogList()
+            .listRowBackground(TrainingLogTheme.background)
+            .navigationTitle("Saved Meals")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) { EditButton() }
+            }
+            .sheet(item: $editingMeal) { meal in SavedMealEditorView(meal: meal) }
+        }.trainingLogNavigation()
+    }
+}
+
+@MainActor
+private struct SavedMealEditorView: View {
+    let meal: SavedMeal
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @State private var name: String
+    @State private var category: MealCategory
+    @State private var calories: String
+    @State private var protein: String
+    @State private var carbs: String
+    @State private var fat: String
+    @State private var fiber: String
+
+    init(meal: SavedMeal) {
+        self.meal = meal
+        _name = State(initialValue: meal.foodName); _category = State(initialValue: meal.mealCategory)
+        _calories = State(initialValue: String(meal.calories)); _protein = State(initialValue: String(meal.proteinGrams)); _carbs = State(initialValue: String(meal.carbohydrateGrams)); _fat = State(initialValue: String(meal.fatGrams)); _fiber = State(initialValue: String(meal.fiberGrams))
+    }
+    var body: some View {
+        NavigationStack { Form {
+            TextField("Name", text: $name)
+            Picker("Category", selection: $category) { ForEach(MealCategory.allCases) { Text($0.displayName).tag($0) } }
+            number("Calories", $calories); number("Protein", $protein); number("Carbohydrates", $carbs); number("Fat", $fat); number("Fiber", $fiber)
+        }.trainingLogForm().navigationTitle("Edit Saved Meal").toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() } }
+        }}.trainingLogNavigation()
+    }
+    private func number(_ label: String, _ value: Binding<String>) -> some View { TextField(label, text: value).keyboardType(.numberPad) }
+    private func save() {
+        guard let calories = Int(calories), let protein = Int(protein), let carbs = Int(carbs), let fat = Int(fat), let fiber = Int(fiber), !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, [calories, protein, carbs, fat, fiber].allSatisfy({ $0 >= 0 }) else { return }
+        meal.foodName = name.trimmingCharacters(in: .whitespacesAndNewlines); meal.mealCategory = category; meal.calories = calories; meal.proteinGrams = protein; meal.carbohydrateGrams = carbs; meal.fatGrams = fat; meal.fiberGrams = fiber
+        try? modelContext.save(); dismiss()
     }
 }
 

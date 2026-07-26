@@ -250,3 +250,10 @@ The prior optional-chain expression dispatched `flatMap` to `String`'s character
 Blank or whitespace-only titles still render as `WORKOUT IN PROGRESS`; nonblank titles are unchanged.
 No workout models, persistence, or UI behavior beyond resolving the compile error changed.
 Validation passed: `swiftc -parse Linkerworks/ContentView.swift` and `git diff --check`.
+
+Sprint 7 Nutrition friction changed `Linkerworks/NutritionView.swift` and `Linkerworks/ContentView.swift` only; MealEntry, SavedMeal, and DailyMacroTarget schemas are unchanged.
+Nutrition has a last-10 distinct Recent re-log strip, Copy Yesterday, and saved-meal quick-log multipliers (x1/x1.5/x2) that proportionally round every macro before saving a new entry.
+Saved Meals now has a manager reachable from Nutritionâ€™s overflow menu: presets can be edited, deleted, and drag-reordered; all actions operate only on SavedMeal objects and never mutate or delete MealEntry history.
+The daily summary displays consumed/target plus an explicit remaining count for calories, protein, carbs, fat, and fiber, all with monospaced digits.
+Today now queries SavedMeal and shows its first four ordered presets in a one-tap EATING row; it creates independent MealEntry copies for today.
+Validation passed: `swiftc -parse Linkerworks/NutritionView.swift Linkerworks/ContentView.swift` and `git diff --check`; full Xcode/device interaction testing is still required on this host.

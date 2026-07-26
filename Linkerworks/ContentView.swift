@@ -61,6 +61,7 @@ private struct TodayView: View {
     @Query(sort: \CompletionRecord.completedAt) private var completionRecords: [CompletionRecord]
     @Query private var assignments: [Assignment]
     @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var workoutSessions: [WorkoutSession]
+    @Query(sort: \SavedMeal.sortOrder) private var savedMeals: [SavedMeal]
 
     @AppStorage("todayHideCompleted") private var hideCompleted = false
     @AppStorage("homeworkIntegrationEnabled") private var homeworkIntegrationEnabled = true
@@ -259,6 +260,31 @@ private struct TodayView: View {
                                 .font(.caption)
                                 .foregroundStyle(TrainingLogTheme.secondaryText)
                         }
+                    }
+                }
+
+                if !savedMeals.isEmpty {
+                    SwiftUI.Section("EATING") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(Array(savedMeals.prefix(4))) { meal in
+                                    Button { quickLogFavorite(meal) } label: {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(meal.foodName).lineLimit(1)
+                                            Text("\(meal.calories) kcal · \(meal.mealCategory.displayName)")
+                                                .font(.caption).monospacedDigit()
+                                                .foregroundStyle(TrainingLogTheme.secondaryText)
+                                        }
+                                        .frame(width: 145, alignment: .leading)
+                                        .padding(10)
+                                        .background(TrainingLogTheme.quietFill, in: RoundedRectangle(cornerRadius: 8))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Log \(meal.foodName)")
+                                }
+                            }
+                        }
+                        .padding(.vertical, 3)
                     }
                 }
 
@@ -756,6 +782,29 @@ private struct TodayView: View {
             modelContext.rollback()
             saveErrorMessage = error.localizedDescription
         }
+    }
+
+    private func quickLogFavorite(_ meal: SavedMeal) {
+        let order = mealEntriesForToday(category: meal.mealCategory).map(\.sortOrder).max().map { $0 + 1 } ?? 0
+        modelContext.insert(MealEntry(
+            date: today,
+            mealCategory: meal.mealCategory,
+            foodName: meal.foodName,
+            calories: meal.calories,
+            proteinGrams: meal.proteinGrams,
+            carbohydrateGrams: meal.carbohydrateGrams,
+            fatGrams: meal.fatGrams,
+            fiberGrams: meal.fiberGrams,
+            sortOrder: order
+        ))
+        do { try modelContext.save() } catch { modelContext.rollback(); saveErrorMessage = error.localizedDescription }
+    }
+
+    private func mealEntriesForToday(category: MealCategory) -> [MealEntry] {
+        let descriptor = FetchDescriptor<MealEntry>()
+        return (try? modelContext.fetch(descriptor))?.filter {
+            calendar.isDate($0.date, inSameDayAs: today) && $0.mealCategory == category
+        } ?? []
     }
 
     private func scheduledDate(for task: TaskItem) -> Date? {
