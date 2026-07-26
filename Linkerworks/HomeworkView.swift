@@ -93,14 +93,10 @@ struct HomeworkView: View {
             }
 
             ForEach(HomeworkBucket.allCases) { bucket in
-                let items = HomeworkSupport.ordered(visibleAssignments.filter {
-                    HomeworkSupport.bucket(for: $0, now: now, calendar: calendar) == bucket
-                }).filter { assignment in
-                    bucket != .done || (assignment.completedAt ?? .distantPast) >= calendar.date(byAdding: .day, value: -14, to: now)!
-                }
+                let items = assignments(in: bucket)
                 if bucket == .done {
                     if !items.isEmpty {
-                        Section {
+                        SwiftUI.Section {
                             if doneExpanded {
                                 ForEach(items) { assignmentRow($0) }
                             }
@@ -113,7 +109,7 @@ struct HomeworkView: View {
                         }
                     }
                 } else if !items.isEmpty {
-                    Section(bucket.title) {
+                    SwiftUI.Section(bucket.title) {
                         ForEach(items) { assignmentRow($0) }
                     }
                 }
@@ -160,6 +156,16 @@ struct HomeworkView: View {
             .padding(.horizontal, TrainingLogTheme.contentInset)
             .padding(.vertical, 6)
         }
+    }
+
+    private func assignments(in bucket: HomeworkBucket) -> [Assignment] {
+        let bucketed = visibleAssignments.filter {
+            HomeworkSupport.bucket(for: $0, now: now, calendar: calendar) == bucket
+        }
+        let ordered = HomeworkSupport.ordered(bucketed)
+        guard bucket == .done else { return ordered }
+        let cutoff = calendar.date(byAdding: .day, value: -14, to: now) ?? now
+        return ordered.filter { ($0.completedAt ?? .distantPast) >= cutoff }
     }
 
     private func courseChip(title: String, color: Color?, isSelected: Bool, action: @escaping () -> Void) -> some View {
