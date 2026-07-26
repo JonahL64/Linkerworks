@@ -200,6 +200,14 @@ The stale removed `DayCompletion` reference at the heatmap cell boundary is gone
 `swiftc -parse Linkerworks/StreaksView.swift Linkerworks/Domain.swift Linkerworks/Models.swift` and `git diff --check` pass.
 Independent adversarial review found no issue in the one-line repair; full Xcode build remains unavailable on this host.
 
+Certifications reliability follow-up changed `Linkerworks/CertificationViews.swift`, `Linkerworks/Models.swift`, `Linkerworks/CalendarPlanView.swift`, and `LinkerworksTests/CertificationTests.swift`.
+Certification presentation is now tracker-owned; active top-level routine tasks from every domain appear in the linked-task picker, and the inline study-task form creates a normal Certifications routine task and selects it.
+`Certification.automaticExamEventID` securely identifies its generated all-day Plan event, so target/name changes update one event, while clearing/deleting the certification removes only that event.
+Existing target-dated certifications backfill a generated event during app startup; manual events are never looked up, changed, or removed by this flow.
+The former derived exam marker was removed because the synchronized event now appears in both the normal month event indicator and selected-day agenda.
+Focused eligibility/ownership/backfill tests were added. `swiftc -parse Linkerworks/*.swift LinkerworksTests/*.swift` and `git diff --check` pass.
+Full SwiftData migration, first-open presentation, task linking, and calendar synchronization runtime verification still require an Xcode/device or Simulator run on this Command Line Tools-only host.
+
 Sprint 3 Homework core added `Course` and `Assignment` SwiftData models in `Linkerworks/Models.swift`, registered in the existing App Group schema in `Linkerworks/SharedModelContainer.swift`.
 `Linkerworks/HomeworkView.swift` provides Plan-reachable homework, course add/rename/color/reorder/archive management, course filters, grouped deterministic assignment rows, direct completion, swipe postponement/deletion, and progressive editor details.
 `CalendarPlanView.swift` now has a Homework toolbar route; calendar events and Manage Routine remain unchanged.

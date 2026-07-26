@@ -7,7 +7,7 @@ struct CalendarPlanView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CalendarEvent.date) private var events: [CalendarEvent]
     @Query private var assignments: [Assignment]
-    @Query(sort: \Certification.name) private var certifications: [Certification]
+    @Query private var certifications: [Certification]
     @AppStorage("homeworkIntegrationEnabled") private var homeworkIntegrationEnabled = true
 
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
@@ -24,6 +24,10 @@ struct CalendarPlanView: View {
         let firstIndex = max(calendar.firstWeekday - 1, 0)
         guard symbols.indices.contains(firstIndex) else { return symbols }
         return Array(symbols[firstIndex...]) + Array(symbols[..<firstIndex])
+    }
+
+    private var ownedExamEventIDs: Set<UUID> {
+        Set(certifications.compactMap(\.automaticExamEventID))
     }
 
     var body: some View {
@@ -148,8 +152,7 @@ struct CalendarPlanView: View {
                                 isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
                                 isToday: calendar.isDateInToday(date),
                                 hasEvents: !events(on: date).isEmpty,
-                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date).isEmpty,
-                                hasCertificationExam: !certifications(on: date).isEmpty
+                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date).isEmpty
                             )
                         }
                         .buttonStyle(.plain)
@@ -184,14 +187,19 @@ struct CalendarPlanView: View {
                 } else {
                     ForEach(Array(dailyEvents.enumerated()), id: \.element.id) { index, event in
                         if index > 0 { LWRowDivider() }
-                        Button {
-                            eventToEdit = event
-                            isPresentingEditor = true
-                        } label: {
+                        if ownedExamEventIDs.contains(event.id) {
                             CalendarEventRow(event: event)
                                 .padding(.horizontal, LWSpace.md)
+                        } else {
+                            Button {
+                                eventToEdit = event
+                                isPresentingEditor = true
+                            } label: {
+                                CalendarEventRow(event: event)
+                                    .padding(.horizontal, LWSpace.md)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                     ForEach(Array(dailyAssignments.enumerated()), id: \.element.id) { index, assignment in
                         if index > 0 || !dailyEvents.isEmpty { LWRowDivider() }
@@ -251,13 +259,6 @@ struct CalendarPlanView: View {
         )
     }
 
-    private func certifications(on date: Date) -> [Certification] {
-        certifications.filter { certification in
-            guard let targetDate = certification.targetDate else { return false }
-            return calendar.isDate(targetDate, inSameDayAs: date)
-        }
-    }
-
     private func select(_ date: Date) {
         selectedDate = calendar.startOfDay(for: date)
         displayedMonth = calendar.dateInterval(of: .month, for: date)?.start ?? date
@@ -276,6 +277,10 @@ struct CalendarPlanView: View {
     }
 
     private func saveEvent(_ event: CalendarEvent?, _ draft: CalendarEventDraft) -> Bool {
+        if let event, ownedExamEventIDs.contains(event.id) {
+            saveErrorMessage = "Update this exam from Certifications."
+            return false
+        }
         let normalizedDate = calendar.startOfDay(for: draft.date)
         let startTime = draft.isAllDay ? nil : time(draft.startTime, on: normalizedDate)
         let endTime = draft.isAllDay
@@ -309,6 +314,10 @@ struct CalendarPlanView: View {
     }
 
     private func deleteEvent(_ event: CalendarEvent) -> Bool {
+        guard !ownedExamEventIDs.contains(event.id) else {
+            saveErrorMessage = "Delete this exam from Certifications."
+            return false
+        }
         modelContext.delete(event)
         return saveContext()
     }
@@ -341,7 +350,6 @@ private struct CalendarDayCell: View {
     let isToday: Bool
     let hasEvents: Bool
     let hasAssignments: Bool
-    let hasCertificationExam: Bool
 
     var body: some View {
         VStack(spacing: LWSpace.xxs) {
@@ -349,7 +357,7 @@ private struct CalendarDayCell: View {
                 .font(isSelected ? LWFont.calloutMedium : LWFont.callout)
                 .monospacedDigit()
 
-            // Three distinct marks: events, assignments due, certification exam.
+            // Events include certification exams once they have been synchronized.
             HStack(spacing: 3) {
                 Circle()
                     .fill(hasEvents ? (isSelected ? LWColor.onAccent : LWColor.accent) : .clear)
@@ -357,9 +365,6 @@ private struct CalendarDayCell: View {
                 RoundedRectangle(cornerRadius: 1)
                     .fill(hasAssignments ? (isSelected ? LWColor.onAccent : LWColor.warning) : .clear)
                     .frame(width: 7, height: 3)
-                Circle()
-                    .fill(hasCertificationExam ? (isSelected ? LWColor.onAccent : LWColor.danger) : .clear)
-                    .frame(width: 4, height: 4)
             }
             .frame(height: 4)
         }
@@ -380,7 +385,7 @@ private struct CalendarDayCell: View {
         }
         .animation(LWMotion.toggle, value: isSelected)
         .accessibilityLabel(date.formatted(date: .long, time: .omitted))
-        .accessibilityValue(hasEvents || hasAssignments || hasCertificationExam ? "\(hasEvents ? "Has events" : "")\(hasEvents && (hasAssignments || hasCertificationExam) ? ", " : "")\(hasAssignments ? "Has assignments due" : "")\(hasAssignments && hasCertificationExam ? ", " : "")\(hasCertificationExam ? "Certification exam" : "")" : "Nothing scheduled")
+        .accessibilityValue(hasEvents || hasAssignments ? "\(hasEvents ? "Has events" : "")\(hasEvents && hasAssignments ? ", " : "")\(hasAssignments ? "Has assignments due" : "")" : "Nothing scheduled")
     }
 }
 

@@ -18,6 +18,7 @@ struct LinkerworksApp: App {
                 in: container.mainContext,
                 defaults: defaults
             )
+            _ = try CertificationExamEventBackfill.apply(in: container.mainContext)
             sharedModelContainer = container
 
 #if DEBUG

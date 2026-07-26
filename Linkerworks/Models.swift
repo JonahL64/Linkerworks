@@ -397,6 +397,10 @@ final class Certification {
     var expiresOn: Date?
     var linkedTaskID: UUID?
     var notes: String?
+    /// The identity of the all-day CalendarEvent maintained for this exam.
+    /// This is intentionally an ID rather than a title/date lookup: both of
+    /// those values are user-editable and may collide with manual events.
+    var automaticExamEventID: UUID?
 
     @Relationship(deleteRule: .cascade)
     var milestones: [CertMilestone]
@@ -405,6 +409,7 @@ final class Certification {
         id: UUID = UUID(), name: String, targetDate: Date? = nil,
         status: String = "planned", expiresOn: Date? = nil,
         linkedTaskID: UUID? = nil, notes: String? = nil,
+        automaticExamEventID: UUID? = nil,
         milestones: [CertMilestone] = []
     ) {
         self.id = id
@@ -414,6 +419,7 @@ final class Certification {
         self.expiresOn = expiresOn
         self.linkedTaskID = linkedTaskID
         self.notes = notes
+        self.automaticExamEventID = automaticExamEventID
         self.milestones = milestones
     }
 }

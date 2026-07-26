@@ -34,5 +34,45 @@ final class CertificationTests: XCTestCase {
         XCTAssertEqual(CertificationSupport.completionCount(taskID: taskID, records: records, endingOn: today, calendar: calendar), 2)
     }
 
+    func testEligibleRoutineTasksIncludeEveryActiveTopLevelTask() {
+        let activeStudy = TaskItem(title: "Study", detail: "", daysOfWeek: ["Monday"], sortOrder: 0, domain: .certifications)
+        let activeOther = TaskItem(title: "Read", detail: "", daysOfWeek: ["Tuesday"], sortOrder: 1, domain: .sleep)
+        let archived = TaskItem(title: "Archived", detail: "", daysOfWeek: ["Monday"], sortOrder: 2, domain: .certifications, isArchived: true)
+        let substep = TaskItem(title: "Substep", detail: "", daysOfWeek: ["Monday"], sortOrder: 0, domain: .lifting, isSubstep: true)
+
+        XCTAssertEqual(
+            Set(CertificationSupport.eligibleRoutineTasks(from: [activeStudy, activeOther, archived, substep]).map(\.id)),
+            Set([activeStudy.id, activeOther.id])
+        )
+    }
+
+    func testOwnedExamEventUsesStableIdentityAndLeavesManualEventsAlone() {
+        let certification = Certification(name: "Security+", targetDate: date(2026, 8, 1))
+        let exam = CalendarEvent(title: "Security+", date: date(2026, 8, 1), isAllDay: true, sortOrder: 0)
+        let manual = CalendarEvent(title: "Security+", date: date(2026, 8, 1), isAllDay: true, sortOrder: 1)
+        certification.automaticExamEventID = exam.id
+
+        XCTAssertEqual(CertificationSupport.ownedExamEvent(for: certification, in: [exam, manual])?.id, exam.id)
+        certification.name = "Security+ retake"
+        certification.targetDate = date(2026, 8, 8)
+        XCTAssertEqual(CertificationSupport.ownedExamEvent(for: certification, in: [exam, manual])?.id, exam.id)
+        XCTAssertNotEqual(CertificationSupport.ownedExamEvent(for: certification, in: [manual])?.id, manual.id)
+        certification.targetDate = nil
+        XCTAssertNil(certification.targetDate)
+    }
+
+    func testExistingExamWithoutOwnedEventIsBackfilledAndStaleIDsRecover() {
+        let certification = Certification(name: "Security+", targetDate: date(2026, 8, 1))
+        XCTAssertTrue(CertificationSupport.needsExamEventBackfill(certification, events: []))
+
+        let event = CalendarEvent(title: "Security+", date: date(2026, 8, 1), isAllDay: true, sortOrder: 0)
+        certification.automaticExamEventID = event.id
+        XCTAssertFalse(CertificationSupport.needsExamEventBackfill(certification, events: [event]))
+        certification.automaticExamEventID = UUID()
+        XCTAssertTrue(CertificationSupport.needsExamEventBackfill(certification, events: [event]))
+        certification.targetDate = nil
+        XCTAssertFalse(CertificationSupport.needsExamEventBackfill(certification, events: [event]))
+    }
+
     private func date(_ year: Int, _ month: Int, _ day: Int) -> Date { calendar.date(from: DateComponents(year: year, month: month, day: day))! }
 }
