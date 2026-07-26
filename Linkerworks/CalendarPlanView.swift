@@ -6,6 +6,8 @@ struct CalendarPlanView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CalendarEvent.date) private var events: [CalendarEvent]
+    @Query private var assignments: [Assignment]
+    @AppStorage("homeworkIntegrationEnabled") private var homeworkIntegrationEnabled = true
 
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
     @State private var displayedMonth = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
@@ -47,7 +49,9 @@ struct CalendarPlanView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     HStack {
                         Button("Today") { selectToday() }
-                        NavigationLink("Homework") { HomeworkView() }
+                        if homeworkIntegrationEnabled {
+                            NavigationLink("Homework") { HomeworkView() }
+                        }
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -124,7 +128,8 @@ struct CalendarPlanView: View {
                                 date: date,
                                 isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
                                 isToday: calendar.isDateInToday(date),
-                                hasEvents: !events(on: date).isEmpty
+                                hasEvents: !events(on: date).isEmpty,
+                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date).isEmpty
                             )
                         }
                         .buttonStyle(.plain)
@@ -140,6 +145,7 @@ struct CalendarPlanView: View {
     @ViewBuilder
     private func agenda(for date: Date, showDateHeader: Bool) -> some View {
         let dailyEvents = events(on: date)
+        let dailyAssignments = homeworkIntegrationEnabled ? assignments(on: date) : []
 
         VStack(alignment: .leading, spacing: 8) {
             if showDateHeader {
@@ -150,8 +156,8 @@ struct CalendarPlanView: View {
                 }
             }
 
-            if dailyEvents.isEmpty {
-                Text("No events scheduled.")
+            if dailyEvents.isEmpty && dailyAssignments.isEmpty {
+                Text("Nothing planned or due. Enjoy the space.")
                     .font(.subheadline)
                     .foregroundStyle(TrainingLogTheme.secondaryText)
                     .padding(.vertical, 6)
@@ -164,6 +170,9 @@ struct CalendarPlanView: View {
                         CalendarEventRow(event: event)
                     }
                     .buttonStyle(.plain)
+                }
+                ForEach(dailyAssignments) { assignment in
+                    CalendarAssignmentRow(assignment: assignment)
                 }
             }
         }
@@ -200,6 +209,16 @@ struct CalendarPlanView: View {
                 }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
+    }
+
+    private func assignments(on date: Date) -> [Assignment] {
+        HomeworkSupport.ordered(
+            assignments.filter {
+                !$0.isDone
+                    && $0.dueDate != HomeworkSupport.noDueDate
+                    && calendar.isDate($0.dueDate, inSameDayAs: date)
+            }
+        )
     }
 
     private func select(_ date: Date) {
@@ -284,14 +303,20 @@ private struct CalendarDayCell: View {
     let isSelected: Bool
     let isToday: Bool
     let hasEvents: Bool
+    let hasAssignments: Bool
 
     var body: some View {
         VStack(spacing: 3) {
             Text(date, format: .dateTime.day())
                 .font(.body.weight(isSelected ? .semibold : .regular))
-            Circle()
-                .fill(hasEvents ? TrainingLogTheme.primaryText : .clear)
-                .frame(width: 4, height: 4)
+            HStack(spacing: 3) {
+                Circle()
+                    .fill(hasEvents ? TrainingLogTheme.primaryText : .clear)
+                    .frame(width: 4, height: 4)
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(hasAssignments ? TrainingLogTheme.completionAccent : .clear)
+                    .frame(width: 7, height: 3)
+            }
         }
         .foregroundStyle(isSelected ? TrainingLogTheme.background : TrainingLogTheme.primaryText)
         .frame(maxWidth: .infinity)
@@ -309,7 +334,7 @@ private struct CalendarDayCell: View {
             }
         }
         .accessibilityLabel(date.formatted(date: .long, time: .omitted))
-        .accessibilityValue(hasEvents ? "Has events" : "No events")
+        .accessibilityValue(hasEvents || hasAssignments ? "\(hasEvents ? "Has events" : "")\(hasEvents && hasAssignments ? ", " : "")\(hasAssignments ? "Has assignments due" : "")" : "Nothing scheduled")
     }
 }
 
@@ -349,6 +374,33 @@ private struct CalendarEventRow: View {
         let start = startTime.formatted(date: .omitted, time: .shortened)
         guard let endTime = event.endTime else { return start }
         return "\(start)–\(endTime.formatted(date: .omitted, time: .shortened))"
+    }
+}
+
+private struct CalendarAssignmentRow: View {
+    let assignment: Assignment
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("Due")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(TrainingLogTheme.completionAccent)
+                .frame(width: 76, alignment: .leading)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(assignment.title)
+                HStack(spacing: 4) {
+                    if let course = assignment.course { Text(course.name) }
+                    Text(assignment.dueDate, format: .dateTime.hour().minute())
+                        .monospacedDigit()
+                }
+                .font(.caption)
+                .foregroundStyle(TrainingLogTheme.secondaryText)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .overlay(alignment: .bottom) { Rectangle().fill(TrainingLogTheme.divider).frame(height: 1) }
+        .accessibilityLabel("Assignment due: \(assignment.title)")
     }
 }
 

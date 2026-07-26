@@ -206,3 +206,17 @@ Sprint 3 Homework core added `Course` and `Assignment` SwiftData models in `Link
 Due date is a required model field; the UI represents no due date with an internal `Date.distantFuture` sentinel so no task/progress APIs are affected.
 `LinkerworksTests/HomeworkCoreTests.swift` covers midnight bucketing, default 11:59 PM round-trip, and deterministic tie sorting.
 Validation limitation: neither `swiftc`, `xcodebuild`, nor Git is installed on this Windows host; source-level review completed, but Xcode must run migration/tests and hands-on UI checks.
+
+Sprint 4 Homework integration changed `CalendarPlanView.swift`, `ContentView.swift`, and `HomeworkView.swift`; no SwiftData schema or routine-progress code changed.
+Plan month cells now show the existing circular event marker plus a separate horizontal assignment-due marker, and selected-day agendas append unfinished due assignments after deterministically sorted all-day/timed events.
+Today now has a DUE TODAY strip above routine sections with the first three unfinished due assignments, overdue count, inline completion, and a header route to Homework.
+Homework has Select mode with bulk mark-done, push-due-date-one-day, and course reassignment actions; its empty state now says “Nothing due. Enjoy it.”
+`LinkerworksTests/HomeworkCoreTests.swift` includes a regression asserting byte-identical routine completion output with assignments present; assignments remain outside the ring, snapshots, streaks, and heatmap inputs.
+Validation remains limited on this Windows host: `swiftc` and Git are unavailable, so full Xcode test/build and runtime interaction verification are still required.
+
+Homework availability setting added in `Linkerworks/SettingsView.swift`, reached from the Today navigation bar’s gear icon.
+The shared `@AppStorage("homeworkIntegrationEnabled")` flag defaults to enabled and preserves all stored Course/Assignment data when disabled.
+When off, Homework is hidden from Today’s DUE TODAY strip and from Plan’s Homework shortcut, month markers, and selected-day agenda entries.
+Routine task progress, snapshots, streaks, and heatmap behavior remain unchanged.
+Full Xcode build and interaction verification are still required because this Windows host lacks Swift tooling.
+`HomeworkCoreTests` now toggles `homeworkIntegrationEnabled` both off and on and asserts byte-identical routine completion output in each case; this covers the same routine-only input used by snapshots, streaks, and heatmap.

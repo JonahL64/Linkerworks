@@ -73,6 +73,9 @@ struct HomeworkView: View {
     @State private var saveError: String?
     @State private var doneExpanded = false
     @State private var now = Date()
+    @State private var isBulkSelecting = false
+    @State private var selectedAssignmentIDs: Set<UUID> = []
+    @State private var showingBulkCoursePicker = false
 
     private let calendar = Calendar.current
 
@@ -116,7 +119,7 @@ struct HomeworkView: View {
             }
 
             if visibleAssignments.isEmpty {
-                Text("No assignments.")
+                Text(selectedCourseID == nil ? "Nothing due. Enjoy it." : "Nothing due for this course.")
                     .foregroundStyle(TrainingLogTheme.secondaryText)
             }
         }
@@ -124,15 +127,40 @@ struct HomeworkView: View {
         .navigationTitle("Homework")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Courses") { showingCourses = true }
+                if isBulkSelecting {
+                    Button("Cancel") { endBulkSelection() }
+                } else {
+                    Button("Courses") { showingCourses = true }
+                }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showingNewAssignment = true } label: { Label("Add Assignment", systemImage: "plus") }
+                if isBulkSelecting {
+                    Menu {
+                        Button("Mark Done") { bulkMarkDone() }
+                            .disabled(selectedAssignmentIDs.isEmpty)
+                        Button("Push Due Date +1 Day") { bulkPostpone() }
+                            .disabled(selectedAssignmentIDs.isEmpty)
+                        Button("Reassign Course") { showingBulkCoursePicker = true }
+                            .disabled(selectedAssignmentIDs.isEmpty)
+                    } label: {
+                        Label("Bulk actions", systemImage: "ellipsis.circle")
+                    }
+                } else {
+                    HStack {
+                        Button { isBulkSelecting = true } label: { Text("Select") }
+                        Button { showingNewAssignment = true } label: { Label("Add Assignment", systemImage: "plus") }
+                    }
+                }
             }
         }
         .sheet(isPresented: $showingNewAssignment) { AssignmentEditorView(assignment: nil, courses: courses) }
         .sheet(item: $assignmentToEdit) { AssignmentEditorView(assignment: $0, courses: courses) }
         .sheet(isPresented: $showingCourses) { CoursesView() }
+        .sheet(isPresented: $showingBulkCoursePicker) {
+            BulkCoursePicker(courses: courses.filter { !$0.isArchived }) { course in
+                bulkReassign(to: course)
+            }
+        }
         .confirmationDialog("Delete assignment?", isPresented: Binding(get: { deletionCandidate != nil }, set: { if !$0 { deletionCandidate = nil } })) {
             Button("Delete", role: .destructive) { deleteCandidate() }
         } message: { Text("This cannot be undone.") }
@@ -184,6 +212,10 @@ struct HomeworkView: View {
 
     @ViewBuilder private func assignmentRow(_ assignment: Assignment) -> some View {
         HStack(spacing: 10) {
+            if isBulkSelecting {
+                Image(systemName: selectedAssignmentIDs.contains(assignment.id) ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selectedAssignmentIDs.contains(assignment.id) ? TrainingLogTheme.completionAccent : TrainingLogTheme.secondaryText)
+            }
             Rectangle().fill(assignment.course?.color ?? TrainingLogTheme.secondaryText).frame(width: 3)
             VStack(alignment: .leading, spacing: 3) {
                 Text(assignment.title).strikethrough(assignment.isDone, color: TrainingLogTheme.secondaryText)
@@ -200,7 +232,9 @@ struct HomeworkView: View {
                 .foregroundStyle(TrainingLogTheme.secondaryText)
             }
             Spacer(minLength: 8)
-            Button { toggleDone(assignment) } label: {
+            Button {
+                if isBulkSelecting { toggleSelection(assignment) } else { toggleDone(assignment) }
+            } label: {
                 Image(systemName: assignment.isDone ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundStyle(assignment.isDone ? TrainingLogTheme.completionAccent : TrainingLogTheme.secondaryText)
@@ -210,7 +244,9 @@ struct HomeworkView: View {
         }
         .trainingLogRow()
         .contentShape(Rectangle())
-        .onTapGesture { assignmentToEdit = assignment }
+        .onTapGesture {
+            if isBulkSelecting { toggleSelection(assignment) } else { assignmentToEdit = assignment }
+        }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button { postpone(assignment) } label: { Label("Tomorrow", systemImage: "arrow.right") }.tint(TrainingLogTheme.secondaryText)
         }
@@ -236,6 +272,52 @@ struct HomeworkView: View {
         save()
     }
 
+    private func toggleSelection(_ assignment: Assignment) {
+        if selectedAssignmentIDs.contains(assignment.id) {
+            selectedAssignmentIDs.remove(assignment.id)
+        } else {
+            selectedAssignmentIDs.insert(assignment.id)
+        }
+    }
+
+    private var selectedAssignments: [Assignment] {
+        assignments.filter { selectedAssignmentIDs.contains($0.id) }
+    }
+
+    private func bulkMarkDone() {
+        for assignment in selectedAssignments where !assignment.isDone {
+            assignment.isDone = true
+            assignment.completedAt = Date()
+            assignment.updatedAt = Date()
+        }
+        save()
+        endBulkSelection()
+    }
+
+    private func bulkPostpone() {
+        for assignment in selectedAssignments where assignment.dueDate != HomeworkSupport.noDueDate {
+            assignment.dueDate = calendar.date(byAdding: .day, value: 1, to: assignment.dueDate) ?? assignment.dueDate
+            assignment.updatedAt = Date()
+        }
+        save()
+        endBulkSelection()
+    }
+
+    private func bulkReassign(to course: Course?) {
+        for assignment in selectedAssignments {
+            assignment.course = course
+            assignment.updatedAt = Date()
+        }
+        save()
+        showingBulkCoursePicker = false
+        endBulkSelection()
+    }
+
+    private func endBulkSelection() {
+        isBulkSelecting = false
+        selectedAssignmentIDs.removeAll()
+    }
+
     private func deleteCandidate() {
         if let deletionCandidate { modelContext.delete(deletionCandidate); save() }
         deletionCandidate = nil
@@ -243,6 +325,37 @@ struct HomeworkView: View {
 
     private func save() {
         do { try modelContext.save() } catch { modelContext.rollback(); saveError = error.localizedDescription }
+    }
+}
+
+private struct BulkCoursePicker: View {
+    let courses: [Course]
+    let onSelected: (Course?) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Button("No course") {
+                    onSelected(nil)
+                    dismiss()
+                }
+                ForEach(courses) { course in
+                    Button {
+                        onSelected(course)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Circle().fill(course.color).frame(width: 8, height: 8)
+                            Text(course.name)
+                        }
+                    }
+                }
+            }
+            .trainingLogList()
+            .navigationTitle("Reassign Course")
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } } }
+        }
     }
 }
 

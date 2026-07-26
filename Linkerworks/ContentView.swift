@@ -59,8 +59,10 @@ private struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \DaySchedule.weekdayIndex) private var daySchedules: [DaySchedule]
     @Query(sort: \CompletionRecord.completedAt) private var completionRecords: [CompletionRecord]
+    @Query private var assignments: [Assignment]
 
     @AppStorage("todayHideCompleted") private var hideCompleted = false
+    @AppStorage("homeworkIntegrationEnabled") private var homeworkIntegrationEnabled = true
     @State private var saveErrorMessage: String?
     @State private var completionMomentVisible = false
     @State private var completionRingPulsing = false
@@ -148,6 +150,22 @@ private struct TodayView: View {
         return Double(completedTopLevelTaskCount) / Double(todayProgressCompletion.scheduledCount)
     }
 
+    private var dueTodayAssignments: [Assignment] {
+        HomeworkSupport.ordered(assignments.filter {
+            !$0.isDone
+                && $0.dueDate != HomeworkSupport.noDueDate
+                && calendar.isDate($0.dueDate, inSameDayAs: today)
+        })
+    }
+
+    private var overdueAssignmentCount: Int {
+        assignments.filter {
+            !$0.isDone
+                && $0.dueDate != HomeworkSupport.noDueDate
+                && calendar.startOfDay(for: $0.dueDate) < today
+        }.count
+    }
+
     private var visibleRenderedTasks: [TaskItem] {
         todaySections.flatMap { section -> [TaskItem] in
             guard !isSectionCollapsed(section) else { return [] }
@@ -206,6 +224,39 @@ private struct TodayView: View {
                     .listRowSeparator(.hidden)
                 }
 
+                if homeworkIntegrationEnabled && (!dueTodayAssignments.isEmpty || overdueAssignmentCount > 0) {
+                    SwiftUI.Section {
+                        NavigationLink {
+                            HomeworkView()
+                        } label: {
+                            HStack {
+                                Text("DUE TODAY")
+                                    .font(.caption.weight(.bold))
+                                    .tracking(1.1)
+                                Spacer()
+                                if overdueAssignmentCount > 0 {
+                                    Text("\(overdueAssignmentCount) overdue")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(TrainingLogTheme.completionAccent)
+                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        ForEach(dueTodayAssignments.prefix(3)) { assignment in
+                            dueTodayAssignmentRow(assignment)
+                        }
+                        if dueTodayAssignments.count > 3 {
+                            Text("+\(dueTodayAssignments.count - 3) more due today")
+                                .font(.caption)
+                                .foregroundStyle(TrainingLogTheme.secondaryText)
+                        }
+                    }
+                }
+
                 ForEach(todaySections) { section in
                     SwiftUI.Section {
                         if !isSectionCollapsed(section) {
@@ -244,6 +295,14 @@ private struct TodayView: View {
             .listRowBackground(TrainingLogTheme.background)
             .navigationTitle("Today")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .accessibilityLabel("Settings")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         hideCompleted.toggle()
@@ -313,6 +372,41 @@ private struct TodayView: View {
             }
             .trainingLogNavigation()
         }
+    }
+
+    private func dueTodayAssignmentRow(_ assignment: Assignment) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(assignment.title)
+                HStack(spacing: 4) {
+                    if let course = assignment.course { Text(course.name) }
+                    Text(assignment.dueDate, format: .dateTime.hour().minute())
+                        .monospacedDigit()
+                }
+                .font(.caption)
+                .foregroundStyle(TrainingLogTheme.secondaryText)
+            }
+            Spacer(minLength: 8)
+            Button {
+                assignment.isDone.toggle()
+                assignment.completedAt = assignment.isDone ? Date() : nil
+                assignment.updatedAt = Date()
+                do {
+                    try modelContext.save()
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } catch {
+                    modelContext.rollback()
+                    saveErrorMessage = error.localizedDescription
+                }
+            } label: {
+                Image(systemName: assignment.isDone ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(assignment.isDone ? TrainingLogTheme.completionAccent : TrainingLogTheme.secondaryText)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(assignment.isDone ? "Mark \(assignment.title) incomplete" : "Mark \(assignment.title) complete")
+        }
+        .trainingLogRow()
     }
 
     private func tasks(in section: Section) -> [TaskItem] {
