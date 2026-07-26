@@ -229,3 +229,12 @@ Certification study remains solely `CompletionRecord` data: no certification com
 `LinkerworksTests/CertificationTests.swift` covers inclusive expiry, countdown/no-date, milestone progress, and complete-only rolling study counts.
 Validation is blocked on this Windows host: `swiftc` and Git are unavailable, so Xcode must build the SwiftData migration, run tests, and verify the creation/linking, heatmap parity, and Plan marker UI.
 Review follow-up: milestone add/toggle operations now roll back and show an error when SwiftData cannot save; rolling 30-day records normalize to local days before filtering.
+
+Sprint 6 workout friction changed only `Linkerworks/ContentView.swift` and `Linkerworks/WorkoutView.swift`; no workout schema, App Group, widget, or finished-history code was changed.
+Today now queries the existing persisted in-progress workout and pins a Resume banner with its title, live monospaced elapsed time, and total set count; it remains absent without an active session.
+Workout start accepts an optional title and exposes Repeat Last Workout only for a non-empty title with a matching completed session; cloning preserves ordered exercise/set names, reps, and loads but creates every cloned set uncompleted.
+Active exercise detail adds inline Reps -> Load keyboard submit chaining, validation that retains focus, a prominent repeated-completed-set action, and a visual-only rest timer derived from the latest completion timestamp.
+Exercise headers show monospaced session volume as sets x reps x load, treating missing loads as zero; completing, quick-logging, and repeated-set creation refresh the timer source without persistence changes.
+Completed workout detail remains display-only and all existing in-progress mutation guards remain in place; `WorkoutSession.inProgressKey` remains the sole one-active-session persistence invariant.
+Validation passed: `swiftc -parse Linkerworks/ContentView.swift Linkerworks/WorkoutView.swift` and `git diff --check`.
+Runtime verification remains required in Xcode/device or Simulator because this host cannot run the iOS app; confirm keyboard Return behavior, timer updates, resume after relaunch, clone state, and completed-history read-only behavior there.

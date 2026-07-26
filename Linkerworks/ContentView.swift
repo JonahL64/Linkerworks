@@ -60,6 +60,7 @@ private struct TodayView: View {
     @Query(sort: \DaySchedule.weekdayIndex) private var daySchedules: [DaySchedule]
     @Query(sort: \CompletionRecord.completedAt) private var completionRecords: [CompletionRecord]
     @Query private var assignments: [Assignment]
+    @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var workoutSessions: [WorkoutSession]
 
     @AppStorage("todayHideCompleted") private var hideCompleted = false
     @AppStorage("homeworkIntegrationEnabled") private var homeworkIntegrationEnabled = true
@@ -164,6 +165,10 @@ private struct TodayView: View {
                 && $0.dueDate != HomeworkSupport.noDueDate
                 && calendar.startOfDay(for: $0.dueDate) < today
         }.count
+    }
+
+    private var activeWorkout: WorkoutSession? {
+        workoutSessions.first { $0.state == .inProgress }
     }
 
     private var visibleRenderedTasks: [TaskItem] {
@@ -293,6 +298,19 @@ private struct TodayView: View {
             }
             .trainingLogList()
             .listRowBackground(TrainingLogTheme.background)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let activeWorkout {
+                    NavigationLink {
+                        WorkoutView()
+                    } label: {
+                        ActiveWorkoutBanner(workout: activeWorkout)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(TrainingLogTheme.background)
+                }
+            }
             .navigationTitle("Today")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -927,6 +945,42 @@ private struct CompletionUndo: Identifiable {
     let id = UUID()
     let snapshots: [CompletionRecordSnapshot]
     let taskIDs: Set<UUID>
+}
+
+private struct ActiveWorkoutBanner: View {
+    let workout: WorkoutSession
+
+    private var setCount: Int {
+        workout.exercises.reduce(0) { $0 + $1.sets.count }
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            HStack(spacing: 10) {
+                Image(systemName: "figure.strengthtraining.traditional")
+                    .foregroundStyle(TrainingLogTheme.completionAccent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(workout.title?.nonEmpty ?? "WORKOUT IN PROGRESS")
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(elapsedText(at: context.date))  ·  \(setCount) SETS")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                }
+                Spacer()
+                Text("RESUME")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(TrainingLogTheme.completionAccent)
+            }
+            .padding(10)
+            .background(TrainingLogTheme.background.opacity(0.98))
+        }
+    }
+
+    private func elapsedText(at date: Date) -> String {
+        let seconds = max(0, Int(date.timeIntervalSince(workout.startedAt)))
+        return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
 }
 
 private struct ProgressRing: View {

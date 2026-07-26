@@ -63,7 +63,11 @@ struct WorkoutView: View {
             }
         }
         .sheet(isPresented: $isPresentingNewWorkoutEditor) {
-            StartWorkoutEditorView(onSaved: startWorkout(withFirstExerciseNamed:))
+            StartWorkoutEditorView(
+                canRepeat: { title in mostRecentFinishedWorkout(titled: title) != nil },
+                onSaved: startWorkout(title:firstExerciseNamed:),
+                onRepeat: repeatLastWorkout(titled:)
+            )
         }
         .sheet(isPresented: $isPresentingSessionEditor) {
             if let activeWorkout {
@@ -180,11 +184,52 @@ struct WorkoutView: View {
         }
     }
 
-    private func startWorkout(withFirstExerciseNamed name: String) -> Bool {
+    private func startWorkout(title: String?, firstExerciseNamed name: String) -> Bool {
         guard activeWorkout == nil else { return false }
-        let workout = WorkoutSession()
+        let workout = WorkoutSession(title: title)
         modelContext.insert(workout)
         modelContext.insert(WorkoutExercise(name: name, sortOrder: 0, session: workout))
+        return saveContext()
+    }
+
+    private func mostRecentFinishedWorkout(titled title: String) -> WorkoutSession? {
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedTitle.isEmpty else { return nil }
+        return completedWorkouts
+            .filter {
+            $0.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+                .localizedCaseInsensitiveCompare(normalizedTitle) == .orderedSame
+            }
+            .filter { !$0.exercises.isEmpty }
+            .max { lhs, rhs in
+                (lhs.finishedAt ?? lhs.startedAt) < (rhs.finishedAt ?? rhs.startedAt)
+            }
+    }
+
+    private func repeatLastWorkout(titled title: String) -> Bool {
+        guard activeWorkout == nil, let source = mostRecentFinishedWorkout(titled: title) else { return false }
+
+        let workout = WorkoutSession(title: title.trimmingCharacters(in: .whitespacesAndNewlines))
+        modelContext.insert(workout)
+        for sourceExercise in orderedExercises(for: source) {
+            let exercise = WorkoutExercise(
+                name: sourceExercise.name,
+                sortOrder: sourceExercise.sortOrder,
+                session: workout
+            )
+            modelContext.insert(exercise)
+            for sourceSet in sourceExercise.sets.sorted(by: { lhs, rhs in
+                lhs.setOrder == rhs.setOrder ? lhs.id.uuidString < rhs.id.uuidString : lhs.setOrder < rhs.setOrder
+            }) {
+                modelContext.insert(WorkoutSet(
+                    setOrder: sourceSet.setOrder,
+                    reps: sourceSet.reps,
+                    load: sourceSet.load,
+                    isCompleted: false,
+                    exercise: exercise
+                ))
+            }
+        }
         return saveContext()
     }
 
@@ -294,6 +339,8 @@ private struct CompletedWorkoutRow: View {
 }
 
 private struct WorkoutExerciseView: View {
+    private enum SetEntryField: Hashable { case reps, load }
+
     @Environment(\.modelContext) private var modelContext
     let exercise: WorkoutExercise
 
@@ -301,6 +348,10 @@ private struct WorkoutExerciseView: View {
     @State private var isPresentingSetEditor = false
     @State private var setToEdit: WorkoutSet?
     @State private var saveErrorMessage: String?
+    @State private var quickReps = ""
+    @State private var quickLoad = ""
+    @State private var quickEntryError: String?
+    @FocusState private var focusedSetEntryField: SetEntryField?
 
     private var orderedSets: [WorkoutSet] {
         exercise.sets.sorted { lhs, rhs in
@@ -312,8 +363,35 @@ private struct WorkoutExerciseView: View {
         exercise.session?.state == .inProgress
     }
 
+    private var sessionVolume: Double {
+        exercise.sets.filter(\.isCompleted).reduce(0) { $0 + (Double($1.reps) * ($1.load ?? 0)) }
+    }
+
+    private var mostRecentCompletion: Date? {
+        exercise.session?.exercises.flatMap(\.sets).compactMap(\.completedAt).max()
+    }
+
     var body: some View {
         List {
+            SwiftUI.Section {
+                exerciseSummaryHeader
+            }
+
+            if isWorkoutInProgress {
+                SwiftUI.Section("Quick Log") {
+                    quickSetEntry
+                    Button("Log Set") {
+                        submitQuickSet()
+                    }
+                    .buttonStyle(.bordered)
+                    if let quickEntryError {
+                        Text(quickEntryError)
+                            .font(.caption)
+                            .foregroundStyle(TrainingLogTheme.completionAccent)
+                    }
+                }
+            }
+
             SwiftUI.Section("Sets") {
                 if orderedSets.isEmpty {
                     Text("Add a set to log reps and optional load.")
@@ -339,12 +417,22 @@ private struct WorkoutExerciseView: View {
 
                 if isWorkoutInProgress {
                     Button {
-                        addNextSet()
+                        addRepeatedCompletedSet()
                     } label: {
-                        Label(orderedSets.isEmpty ? "Add Set" : "Add Completed Set", systemImage: "plus")
+                        Label(
+                            orderedSets.contains(where: \.isCompleted) ? "Add Repeated Completed Set" : "Log Your First Set",
+                            systemImage: "plus.circle.fill"
+                        )
+                        .font(.body.weight(.semibold))
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(TrainingLogTheme.primaryText)
+                    .trainingLogRow()
                 }
             }
+        }
+        .onAppear {
+            seedQuickEntryFromLatestSet()
         }
         .trainingLogList()
         .listRowBackground(TrainingLogTheme.background)
@@ -394,6 +482,89 @@ private struct WorkoutExerciseView: View {
         return saveContext()
     }
 
+    private var exerciseSummaryHeader: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("\(sessionVolume.displayText) VOLUME")
+                .font(.headline)
+                .monospacedDigit()
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(restText(at: context.date))
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(TrainingLogTheme.secondaryText)
+            }
+        }
+    }
+
+    private var quickSetEntry: some View {
+        HStack(spacing: 10) {
+            TextField("Reps", text: $quickReps)
+                .keyboardType(.numbersAndPunctuation)
+                .textInputAutocapitalization(.never)
+                .submitLabel(.next)
+                .focused($focusedSetEntryField, equals: .reps)
+                .onSubmit { focusedSetEntryField = .load }
+                .monospacedDigit()
+                .frame(maxWidth: .infinity)
+            TextField("Load", text: $quickLoad)
+                .keyboardType(.numbersAndPunctuation)
+                .submitLabel(.done)
+                .focused($focusedSetEntryField, equals: .load)
+                .onSubmit { submitQuickSet() }
+                .monospacedDigit()
+                .frame(maxWidth: .infinity)
+            Text("LOAD")
+                .font(.caption)
+                .foregroundStyle(TrainingLogTheme.secondaryText)
+        }
+    }
+
+    private func restText(at date: Date) -> String {
+        guard let mostRecentCompletion else { return "REST —" }
+        let seconds = max(0, Int(date.timeIntervalSince(mostRecentCompletion)))
+        return String(format: "REST %02d:%02d", seconds / 60, seconds % 60)
+    }
+
+    private func seedQuickEntryFromLatestSet() {
+        guard let latestSet = orderedSets.last else { return }
+        quickReps = String(latestSet.reps)
+        quickLoad = latestSet.load.map { $0.displayText } ?? ""
+    }
+
+    private func submitQuickSet() {
+        guard let reps = Int(quickReps.trimmingCharacters(in: .whitespacesAndNewlines)), reps >= 0 else {
+            quickEntryError = "Enter zero or a positive whole number of reps."
+            focusedSetEntryField = .reps
+            return
+        }
+        let trimmedLoad = quickLoad.trimmingCharacters(in: .whitespacesAndNewlines)
+        let load: Double?
+        if trimmedLoad.isEmpty {
+            load = nil
+        } else if let parsed = Double(normalizedLoad(trimmedLoad)), parsed.isFinite, parsed >= 0 {
+            load = parsed
+        } else {
+            quickEntryError = "Load must be blank or a nonnegative number."
+            focusedSetEntryField = .load
+            return
+        }
+
+        guard isWorkoutInProgress else { return }
+        let setOrder = (exercise.sets.map(\.setOrder).max() ?? -1) + 1
+        modelContext.insert(WorkoutSet(
+            setOrder: setOrder,
+            reps: reps,
+            load: load,
+            isCompleted: true,
+            completedAt: Date(),
+            exercise: exercise
+        ))
+        if saveContext() {
+            quickEntryError = nil
+            focusedSetEntryField = .reps
+        }
+    }
+
     private func saveSet(_ workoutSet: WorkoutSet?, _ reps: Int, _ load: Double?, _ isCompleted: Bool) -> Bool {
         guard isWorkoutInProgress else {
             saveErrorMessage = "Completed workouts cannot be changed."
@@ -417,10 +588,9 @@ private struct WorkoutExerciseView: View {
         return saveContext()
     }
 
-    private func addNextSet() {
-        guard let priorSet = orderedSets.last else {
-            setToEdit = nil
-            isPresentingSetEditor = true
+    private func addRepeatedCompletedSet() {
+        guard let priorSet = orderedSets.last(where: \.isCompleted) else {
+            focusedSetEntryField = .reps
             return
         }
 
@@ -435,9 +605,12 @@ private struct WorkoutExerciseView: View {
             reps: priorSet.reps,
             load: priorSet.load,
             isCompleted: true,
+            completedAt: Date(),
             exercise: exercise
         ))
-        _ = saveContext()
+        if saveContext() {
+            seedQuickEntryFromLatestSet()
+        }
     }
 
     private func toggleCompletion(for workoutSet: WorkoutSet) {
@@ -447,7 +620,9 @@ private struct WorkoutExerciseView: View {
         }
         workoutSet.isCompleted.toggle()
         workoutSet.completedAt = workoutSet.isCompleted ? Date() : nil
-        _ = saveContext()
+        if saveContext() {
+            seedQuickEntryFromLatestSet()
+        }
     }
 
     private func reorderSets(source: IndexSet, destination: Int) {
@@ -489,6 +664,11 @@ private struct WorkoutExerciseView: View {
             saveErrorMessage = error.localizedDescription
             return false
         }
+    }
+
+    private func normalizedLoad(_ value: String) -> String {
+        let separator = Locale.current.decimalSeparator ?? "."
+        return separator == "." ? value : value.replacingOccurrences(of: separator, with: ".")
     }
 }
 
@@ -645,9 +825,12 @@ private struct WorkoutSessionEditorView: View {
 
 @MainActor
 private struct StartWorkoutEditorView: View {
-    let onSaved: (String) -> Bool
+    let canRepeat: (String) -> Bool
+    let onSaved: (String?, String) -> Bool
+    let onRepeat: (String) -> Bool
 
     @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
     @State private var exerciseName = ""
     @State private var validationMessage: String?
 
@@ -655,11 +838,23 @@ private struct StartWorkoutEditorView: View {
         NavigationStack {
             Form {
                 SwiftUI.Section {
+                    TextField("Workout title (optional)", text: $title)
                     TextField("Exercise name", text: $exerciseName)
                 } header: {
                     Text("First Exercise")
                 } footer: {
-                    Text("The workout starts when this exercise is saved.")
+                    Text("A matching titled workout can be repeated with its exercise and set structure.")
+                }
+
+                if let workoutTitle = title.trimmedOrNil, canRepeat(workoutTitle) {
+                    SwiftUI.Section {
+                        Button {
+                            repeatLastWorkout(named: workoutTitle)
+                        } label: {
+                            Label("Repeat Last Workout", systemImage: "arrow.clockwise")
+                                .font(.body.weight(.semibold))
+                        }
+                    }
                 }
             }
             .trainingLogForm()
@@ -689,10 +884,18 @@ private struct StartWorkoutEditorView: View {
             validationMessage = "Enter an exercise name."
             return
         }
-        if onSaved(name) {
+        if onSaved(title.trimmedOrNil, name) {
             dismiss()
         } else {
             validationMessage = "The workout could not be started. Try again."
+        }
+    }
+
+    private func repeatLastWorkout(named title: String) {
+        if onRepeat(title) {
+            dismiss()
+        } else {
+            validationMessage = "The last workout could not be repeated. Try again."
         }
     }
 }
