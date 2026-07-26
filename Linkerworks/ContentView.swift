@@ -281,14 +281,7 @@ private struct TodayView: View {
                                     }
                                 }
                             } header: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(RoutinePhasePreferences.label(for: phase))
-                                        .trainingLogSectionLabel()
-                                    Text(phaseStartGuidanceText(for: phase))
-                                        .font(.caption)
-                                        .foregroundStyle(TrainingLogTheme.secondaryText)
-                                    sectionHeader(section)
-                                }
+                                phaseSectionHeader(phase, section: section)
                             }
                         }
                     }
@@ -438,9 +431,19 @@ private struct TodayView: View {
         .trainingLogRow()
     }
 
-    private func phaseStartGuidanceText(for phase: RoutineDayPhase) -> String {
+    private func phaseSectionHeader(_ phase: RoutineDayPhase, section: Section) -> some View {
+        let phaseLabel = RoutinePhasePreferences.label(for: phase)
         let startGuidance = RoutinePhasePreferences.startGuidance(for: phase)
-        return startGuidance.map { "From \($0)" } ?? "Flexible"
+        let guidanceText = startGuidance.map { "From \($0)" } ?? "Flexible"
+
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(phaseLabel)
+                .trainingLogSectionLabel()
+            Text(guidanceText)
+                .font(.caption)
+                .foregroundStyle(TrainingLogTheme.secondaryText)
+            sectionHeader(section)
+        }
     }
 
     private func tasks(in section: Section) -> [TaskItem] {

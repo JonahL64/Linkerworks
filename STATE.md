@@ -306,3 +306,9 @@ The phase header now receives a precomputed guidance string from `phaseStartGuid
 This moves optional guidance formatting out of the SwiftUI `Text` expression identified by Xcode.
 The displayed wording remains “From <guidance>” or “Flexible”; no model, persistence, or UI structure changed.
 Focused source parsing and diff validation passed; full Xcode build still requires macOS Xcode or a Simulator.
+
+Today phase-header follow-up changed `Linkerworks/ContentView.swift` only.
+The entire phase header now renders through `phaseSectionHeader(_:section:)`, rather than as part of the nested Today list builder.
+The helper computes phase label and guidance text before returning its small `VStack`, reducing the compiler's type-checking scope at the reported line.
+The phase label, “From <guidance>”/“Flexible” text, and section-header control remain unchanged.
+Focused source parsing and diff validation passed; full Xcode compilation still requires macOS Xcode or a Simulator.
