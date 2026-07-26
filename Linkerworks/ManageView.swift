@@ -468,11 +468,11 @@ private struct TaskEditorView: View {
         } else {
             savedTask = TaskItem(
                 title: cleanTitle,
+                routinePhase: routinePhase,
                 detail: detail,
                 daysOfWeek: orderedDays,
                 sortOrder: nextSortOrder(in: selectedSection, phase: routinePhase),
-                domain: selectedDomain,
-                routinePhase: routinePhase
+                domain: selectedDomain
             )
             selectedSection.tasks.append(savedTask)
             modelContext.insert(savedTask)
@@ -499,12 +499,12 @@ private struct TaskEditorView: View {
 
             let substep = TaskItem(
                 title: cleanSubstepTitle,
+                routinePhase: routinePhase,
                 detail: draft.detail,
                 daysOfWeek: orderedDays,
                 sortOrder: nextSubstepSortOrder(in: savedTask),
                 domain: selectedDomain,
-                isSubstep: true,
-                routinePhase: routinePhase
+                isSubstep: true
             )
             savedTask.children.append(substep)
             modelContext.insert(substep)

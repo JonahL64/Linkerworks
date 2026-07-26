@@ -294,3 +294,9 @@ Flexible routine phases replaced regular routine clock times with Anytime, Morni
 `Linkerworks/SettingsView.swift` lets the user customize phase names and start-time guidance, with validation; it does not create due dates or reminders.
 `LinkerworksTests/WidgetProjectionTests.swift` now covers phase ordering and valid/malformed legacy phase inference.
 Validation passed: target-separated Swift parse and `git diff --check`; full Xcode build, XCTest execution, migration, and UI interaction validation still require macOS Xcode or a Simulator.
+
+Manage compile repair changed `Linkerworks/ManageView.swift` only.
+Both new `TaskItem` creation calls now pass `routinePhase` before `detail`, matching the initializer declaration in `Linkerworks/Models.swift`.
+This resolves the two reported Xcode argument-order errors; no model, persistence, or UI structure changed.
+Focused validation passed: `swiftc -parse Linkerworks/ManageView.swift Linkerworks/Models.swift` and `git diff --check`.
+Full Xcode build and interaction verification still require macOS Xcode or a Simulator.
