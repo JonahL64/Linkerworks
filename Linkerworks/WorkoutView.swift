@@ -93,15 +93,15 @@ struct WorkoutView: View {
     private func activeWorkoutContent(_ workout: WorkoutSession) -> some View {
         SwiftUI.Section {
             VStack(alignment: .leading, spacing: 6) {
-                Text(workout.title?.nonEmpty ?? "WORKOUT IN PROGRESS")
-                    .font(.headline)
+                Text(workout.title?.nonEmpty ?? "Workout in progress")
+                    .font(LWFont.bodyStrong)
                 Text(workout.startedAt, format: .dateTime.weekday(.abbreviated).month().day().hour().minute())
-                    .font(.caption)
+                    .font(LWFont.caption)
                     .monospacedDigit()
                     .foregroundStyle(TrainingLogTheme.secondaryText)
                 if let notes = workout.notes?.nonEmpty {
                     Text(notes)
-                        .font(.subheadline)
+                        .font(LWFont.callout)
                         .foregroundStyle(TrainingLogTheme.secondaryText)
                 }
             }
@@ -150,7 +150,7 @@ struct WorkoutView: View {
                 isPresentingNewWorkoutEditor = true
             } label: {
                 Label("Start Workout", systemImage: "play.fill")
-                    .font(.body.weight(.semibold))
+                    .font(LWFont.bodyStrong)
             }
             .buttonStyle(.plain)
             .foregroundStyle(TrainingLogTheme.primaryText)
@@ -308,7 +308,7 @@ private struct WorkoutExerciseRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(exercise.name)
             Text("\(completedCount) / \(orderedSets.count) SETS")
-                .font(.caption)
+                .font(LWFont.caption)
                 .monospacedDigit()
                 .foregroundStyle(TrainingLogTheme.secondaryText)
         }
@@ -326,12 +326,12 @@ private struct CompletedWorkoutRow: View {
             Text(workout.title?.nonEmpty ?? "Workout")
             if let finishedAt = workout.finishedAt {
                 Text(finishedAt, format: .dateTime.weekday(.abbreviated).month().day().year().hour().minute())
-                    .font(.caption)
+                    .font(LWFont.caption)
                     .monospacedDigit()
                     .foregroundStyle(TrainingLogTheme.secondaryText)
             }
             Text("\(exerciseCount) EXERCISES · \(setCount) SETS")
-                .font(.caption)
+                .font(LWFont.caption)
                 .monospacedDigit()
                 .foregroundStyle(TrainingLogTheme.secondaryText)
         }
@@ -386,7 +386,7 @@ private struct WorkoutExerciseView: View {
                     .buttonStyle(.bordered)
                     if let quickEntryError {
                         Text(quickEntryError)
-                            .font(.caption)
+                            .font(LWFont.caption)
                             .foregroundStyle(TrainingLogTheme.completionAccent)
                     }
                 }
@@ -423,7 +423,7 @@ private struct WorkoutExerciseView: View {
                             orderedSets.contains(where: \.isCompleted) ? "Add Repeated Completed Set" : "Log Your First Set",
                             systemImage: "plus.circle.fill"
                         )
-                        .font(.body.weight(.semibold))
+                        .font(LWFont.bodyStrong)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(TrainingLogTheme.primaryText)
@@ -485,11 +485,11 @@ private struct WorkoutExerciseView: View {
     private var exerciseSummaryHeader: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text("\(sessionVolume.displayText) VOLUME")
-                .font(.headline)
+                .font(LWFont.bodyStrong)
                 .monospacedDigit()
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 Text(restText(at: context.date))
-                    .font(.caption)
+                    .font(LWFont.caption)
                     .monospacedDigit()
                     .foregroundStyle(TrainingLogTheme.secondaryText)
             }
@@ -513,16 +513,16 @@ private struct WorkoutExerciseView: View {
                 .onSubmit { submitQuickSet() }
                 .monospacedDigit()
                 .frame(maxWidth: .infinity)
-            Text("LOAD")
-                .font(.caption)
+            Text("Load")
+                .font(LWFont.caption)
                 .foregroundStyle(TrainingLogTheme.secondaryText)
         }
     }
 
     private func restText(at date: Date) -> String {
-        guard let mostRecentCompletion else { return "REST —" }
+        guard let mostRecentCompletion else { return "Rest —" }
         let seconds = max(0, Int(date.timeIntervalSince(mostRecentCompletion)))
-        return String(format: "REST %02d:%02d", seconds / 60, seconds % 60)
+        return String(format: "Rest %02d:%02d", seconds / 60, seconds % 60)
     }
 
     private func seedQuickEntryFromLatestSet() {
@@ -678,35 +678,41 @@ private struct WorkoutSetRow: View {
     let onEdit: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: LWSpace.sm) {
             Button(action: onToggleCompletion) {
-                Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(workoutSet.isCompleted ? TrainingLogTheme.completionAccent : TrainingLogTheme.secondaryText)
-                    .font(.title3)
+                LWCheckControl(state: workoutSet.isCompleted ? .complete : .pending)
             }
             .buttonStyle(.plain)
 
             Button(action: onEdit) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("SET \(workoutSet.setOrder + 1)")
-                        .font(.caption.weight(.semibold))
+                HStack(spacing: LWSpace.sm) {
+                    // Set number as a fixed-width numeral so the column aligns.
+                    Text("\(workoutSet.setOrder + 1)")
+                        .font(LWFont.monoSmall)
                         .monospacedDigit()
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
-                    Text(workoutSet.summary)
-                        .monospacedDigit()
-                        .foregroundStyle(TrainingLogTheme.primaryText)
-                    if let completedAt = workoutSet.completedAt {
-                        Text(completedAt, format: .dateTime.hour().minute())
-                            .font(.caption2)
+                        .foregroundStyle(LWColor.inkTertiary)
+                        .frame(width: 20, alignment: .trailing)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(workoutSet.summary)
+                            .font(LWFont.bodyMedium)
                             .monospacedDigit()
-                            .foregroundStyle(TrainingLogTheme.completionAccent)
+                            .foregroundStyle(LWColor.ink)
+
+                        if let completedAt = workoutSet.completedAt {
+                            Text(completedAt, format: .dateTime.hour().minute())
+                                .font(LWFont.monoSmall)
+                                .monospacedDigit()
+                                .foregroundStyle(LWColor.success)
+                        }
                     }
+
+                    Spacer(minLength: 0)
                 }
             }
             .buttonStyle(.plain)
-
-            Spacer()
         }
+        .trainingLogRow()
     }
 }
 
@@ -743,8 +749,8 @@ private struct CompletedWorkoutDetailView: View {
                             HStack {
                                 Image(systemName: workoutSet.isCompleted ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(workoutSet.isCompleted ? TrainingLogTheme.completionAccent : TrainingLogTheme.secondaryText)
-                                Text("SET \(workoutSet.setOrder + 1)")
-                                    .font(.caption.weight(.semibold))
+                                Text("Set \(workoutSet.setOrder + 1)")
+                                    .font(LWFont.captionMedium)
                                     .monospacedDigit()
                                     .foregroundStyle(TrainingLogTheme.secondaryText)
                                 Spacer()
@@ -852,7 +858,7 @@ private struct StartWorkoutEditorView: View {
                             repeatLastWorkout(named: workoutTitle)
                         } label: {
                             Label("Repeat Last Workout", systemImage: "arrow.clockwise")
-                                .font(.body.weight(.semibold))
+                                .font(LWFont.bodyStrong)
                         }
                     }
                 }

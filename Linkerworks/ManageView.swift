@@ -175,23 +175,25 @@ private struct TaskSummaryRow: View {
     let task: TaskItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(RoutinePhasePreferences.label(for: task.routinePhase).uppercased())
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
+        VStack(alignment: .leading, spacing: LWSpace.xxs) {
+            HStack(alignment: .firstTextBaseline, spacing: LWSpace.xs) {
                 Text(task.title)
-                    .foregroundStyle(TrainingLogTheme.primaryText)
+                    .font(LWFont.body)
+                    .foregroundStyle(LWColor.ink)
+
+                Spacer(minLength: LWSpace.xs)
+
+                LWChip(text: RoutinePhasePreferences.label(for: task.routinePhase))
             }
 
             if !task.detail.isEmpty {
                 Text(task.detail)
-                    .font(.caption)
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                    .font(LWFont.caption)
+                    .foregroundStyle(LWColor.inkSecondary)
                     .lineLimit(2)
             }
         }
-        .contentShape(Rectangle())
+        .trainingLogRow()
     }
 }
 
@@ -365,7 +367,7 @@ private struct TaskEditorView: View {
                         Button("Archive Sub-step") {
                             archivedExistingSubstepIDs.insert(substep.id)
                         }
-                        .font(.caption)
+                        .font(LWFont.caption)
                     }
                 }
             }
@@ -380,7 +382,7 @@ private struct TaskEditorView: View {
                     Button("Remove Sub-step") {
                         pendingSubsteps.removeAll { $0.id == substep.id }
                     }
-                    .font(.caption)
+                    .font(LWFont.caption)
                 }
             }
 
@@ -393,7 +395,7 @@ private struct TaskEditorView: View {
 
             if selectedDomain != .lifting {
                 Text("Select the Lifting domain to add sub-steps.")
-                    .font(.caption)
+                    .font(LWFont.caption)
                     .foregroundStyle(TrainingLogTheme.secondaryText)
             }
         }

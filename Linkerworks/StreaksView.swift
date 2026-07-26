@@ -25,55 +25,151 @@ struct StreaksView: View {
             ?? calendar.startOfDay(for: Date())
     }
 
+    @State private var showingHeatmapInfo = false
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    HStack(spacing: 28) {
-                        streakValue("Current Streak", days: summary.currentStreak)
-                        streakValue("Longest Streak", days: summary.longestStreak)
+                VStack(alignment: .leading, spacing: LWSpace.xl) {
+                    streakBlock
+
+                    LWSection("Last 14 days") {
+                        TrendStripView(
+                            days: summary.recentDays(count: 14),
+                            calendar: calendar
+                        )
+                        .padding(LWSpace.md)
                     }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Completion heatmap")
-                            .trainingLogSectionLabel()
-
+                    LWSection(
+                        "Completion heatmap",
+                        accessory: AnyView(
+                            Button {
+                                showingHeatmapInfo = true
+                            } label: {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(LWColor.inkTertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("How completion is counted")
+                        )
+                    ) {
                         CalendarHeatmapView(
                             month: currentMonth,
                             summary: summary,
                             calendar: calendar
                         )
+                        .padding(LWSpace.md)
                     }
 
                     if let rollup = summary.currentWeekRollup {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("This week")
-                                .trainingLogSectionLabel()
+                        LWSection("This week") {
                             WeekRollupRow(rollup: rollup)
+                                .padding(LWSpace.md)
                         }
                     }
                 }
-                .padding()
+                .padding(.horizontal, LWSpace.screenInset)
+                .padding(.bottom, LWSpace.xxl)
             }
-            .background(TrainingLogTheme.background)
+            .background(LWColor.surface)
             .navigationTitle("Progress")
+            .alert("How completion is counted", isPresented: $showingHeatmapInfo) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Skipped tasks are excluded from daily progress. Days with no scheduled tasks, or every task skipped, are neutral for streaks.")
+            }
         }
         .trainingLogNavigation()
     }
 
-    private func streakValue(_ title: String, days: Int) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .trainingLogSectionLabel()
-            Text(days.formatted())
-                .font(.system(size: 34, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-            Text(days == 1 ? "day" : "days")
-                .font(.subheadline)
-                .foregroundStyle(TrainingLogTheme.secondaryText)
+    /// The headline pair. Current streak leads at full display size; longest is
+    /// supporting context rather than a co-equal number.
+    private var streakBlock: some View {
+        VStack(alignment: .leading, spacing: LWSpace.md) {
+            VStack(alignment: .leading, spacing: LWSpace.xxs) {
+                Text("Current streak")
+                    .font(LWFont.caption)
+                    .foregroundStyle(LWColor.inkSecondary)
+
+                HStack(alignment: .firstTextBaseline, spacing: LWSpace.xs) {
+                    Text(summary.currentStreak.formatted())
+                        .font(LWFont.displayLarge)
+                        .monospacedDigit()
+                        .foregroundStyle(
+                            summary.currentStreak > 0 ? LWColor.success : LWColor.ink
+                        )
+                        .contentTransition(.numericText())
+
+                    Text(summary.currentStreak == 1 ? "day" : "days")
+                        .font(LWFont.body)
+                        .foregroundStyle(LWColor.inkSecondary)
+                }
+            }
+
+            Divider().overlay(LWColor.hairline)
+
+            HStack(spacing: LWSpace.xxs) {
+                Text("Longest")
+                    .font(LWFont.callout)
+                    .foregroundStyle(LWColor.inkSecondary)
+                Spacer(minLength: LWSpace.xs)
+                Text("\(summary.longestStreak.formatted()) \(summary.longestStreak == 1 ? "day" : "days")")
+                    .font(LWFont.calloutMedium)
+                    .monospacedDigit()
+                    .foregroundStyle(LWColor.ink)
+            }
+            .accessibilityElement(children: .combine)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
+        .lwBlock(padding: LWSpace.lg, radius: LWRadius.xl)
+        .accessibilityHint("Current streak is measured through yesterday.")
+    }
+}
+
+/// Fourteen-day completion trend. Gives the screen a sense of direction that two
+/// standalone numbers and a month grid could not.
+private struct TrendStripView: View {
+    let days: [(date: Date, completion: ProgressDayCompletion)]
+    let calendar: Calendar
+
+    private var maxHeight: CGFloat { 64 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: LWSpace.xs) {
+            HStack(alignment: .bottom, spacing: 3) {
+                ForEach(Array(days.enumerated()), id: \.offset) { _, entry in
+                    let pct = entry.completion.scheduledCount == 0
+                        ? 0
+                        : entry.completion.percentage
+
+                    VStack(spacing: LWSpace.xxs) {
+                        Spacer(minLength: 0)
+
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(
+                                entry.completion.scheduledCount == 0
+                                    ? LWColor.surfaceSunken
+                                    : (pct >= 1 ? LWColor.success : LWColor.accent.opacity(0.55))
+                            )
+                            .frame(height: max(3, maxHeight * pct))
+
+                        Text(entry.date, format: .dateTime.day())
+                            .font(.system(size: 9))
+                            .monospacedDigit()
+                            .foregroundStyle(
+                                calendar.isDateInToday(entry.date)
+                                    ? LWColor.accent
+                                    : LWColor.inkTertiary
+                            )
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: maxHeight + 16)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Completion trend for the last 14 days")
     }
 }
 
@@ -112,25 +208,37 @@ private struct CalendarHeatmapView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: LWSpace.sm) {
             Text(month, format: .dateTime.month(.wide).year())
-                .font(.subheadline.weight(.semibold))
+                .font(LWFont.titleSmall)
+                .foregroundStyle(LWColor.ink)
 
-            LazyVGrid(columns: columns, spacing: 4) {
+            LazyVGrid(columns: columns, spacing: LWSpace.xxs) {
                 ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
-                        .font(.caption2)
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(LWColor.inkTertiary)
                         .frame(maxWidth: .infinity)
                 }
 
                 ForEach(Array(monthDays.enumerated()), id: \.offset) { _, date in
                     if let date {
-                        HeatmapDayCell(
-                            date: date,
-                            completion: summary.completion(for: date),
+                        let completion = summary.completion(for: date)
+                        LWHeatCell(
+                            day: calendar.component(.day, from: date),
+                            percentage: completion.percentage,
+                            hasSchedule: completion.scheduledCount > 0,
                             isFuture: date > calendar.startOfDay(for: Date()),
                             isToday: calendar.isDateInToday(date)
+                        )
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(
+                            date.formatted(.dateTime.weekday(.wide).month().day().year())
+                        )
+                        .accessibilityValue(
+                            completion.scheduledCount == 0
+                                ? "No scheduled tasks, or all tasks skipped"
+                                : "\(completion.completedCount) of \(completion.scheduledCount) tasks completed"
                         )
                     } else {
                         Color.clear
@@ -138,60 +246,7 @@ private struct CalendarHeatmapView: View {
                     }
                 }
             }
-
-            Text("Skipped tasks are excluded from daily progress. Days with no scheduled tasks, or every task skipped, are neutral for streaks.")
-                .font(.caption)
-                .foregroundStyle(TrainingLogTheme.secondaryText)
         }
-    }
-}
-
-private struct HeatmapDayCell: View {
-    let date: Date
-    let completion: ProgressDayCompletion
-    let isFuture: Bool
-    let isToday: Bool
-
-    private var fill: Color {
-        guard !isFuture else { return .clear }
-        guard completion.scheduledCount > 0 else { return TrainingLogTheme.quietFill }
-        return TrainingLogTheme.completionAccent.opacity(0.12 + (0.88 * completion.percentage))
-    }
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 5)
-                .fill(fill)
-            if isToday {
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(TrainingLogTheme.primaryText, lineWidth: 1)
-            }
-            VStack(spacing: 1) {
-                Text(date, format: .dateTime.day())
-                    .font(.caption.weight(.semibold))
-                if !isFuture, completion.scheduledCount > 0 {
-                    Text(completion.percentage, format: .percent.precision(.fractionLength(0)))
-                        .font(.system(size: 8))
-                }
-            }
-            .foregroundStyle(isFuture ? TrainingLogTheme.secondaryText.opacity(0.5) : TrainingLogTheme.primaryText)
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            date.formatted(.dateTime.weekday(.wide).month().day().year())
-        )
-        .accessibilityValue(accessibilityValue)
-    }
-
-    private var accessibilityValue: String {
-        if isFuture {
-            return "Future day"
-        }
-        if completion.scheduledCount == 0 {
-            return "No scheduled tasks, or all tasks skipped"
-        }
-        return "\(completion.completedCount) of \(completion.scheduledCount) tasks completed"
     }
 }
 
@@ -199,25 +254,41 @@ private struct WeekRollupRow: View {
     let rollup: WeekRollup
 
     var body: some View {
-        HStack {
-            Text(rollup.start, format: .dateTime.month(.abbreviated).day())
-            Text("–")
-                .foregroundStyle(TrainingLogTheme.secondaryText)
-            Text(rollup.end, format: .dateTime.month(.abbreviated).day())
-            Spacer()
+        VStack(alignment: .leading, spacing: LWSpace.sm) {
+            HStack(alignment: .firstTextBaseline) {
+                HStack(spacing: LWSpace.xxs) {
+                    Text(rollup.start, format: .dateTime.month(.abbreviated).day())
+                    Text("–").foregroundStyle(LWColor.inkTertiary)
+                    Text(rollup.end, format: .dateTime.month(.abbreviated).day())
+                }
+                .font(LWFont.callout)
+                .foregroundStyle(LWColor.inkSecondary)
+
+                Spacer(minLength: LWSpace.xs)
+
+                if rollup.scheduledCount > 0 {
+                    HStack(alignment: .firstTextBaseline, spacing: LWSpace.xxs) {
+                        Text(rollup.percentage, format: .percent.precision(.fractionLength(0)))
+                            .font(LWFont.displaySmall)
+                            .monospacedDigit()
+                            .foregroundStyle(LWColor.ink)
+
+                        Text("(\(rollup.completedCount)/\(rollup.scheduledCount))")
+                            .font(LWFont.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(LWColor.inkTertiary)
+                    }
+                }
+            }
+
             if rollup.scheduledCount == 0 {
-                    Text("No scheduled tasks or all skipped")
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                Text("No scheduled tasks this week, or all were skipped.")
+                    .font(LWFont.callout)
+                    .foregroundStyle(LWColor.inkSecondary)
             } else {
-                Text(rollup.percentage, format: .percent.precision(.fractionLength(0)))
-                    .fontWeight(.semibold)
-                Text("(\(rollup.completedCount)/\(rollup.scheduledCount))")
-                    .font(.caption)
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                LWProgressBar(progress: rollup.percentage, height: 6)
             }
         }
-        .font(.subheadline)
-        .padding(.vertical, 6)
         .accessibilityElement(children: .combine)
     }
 }
@@ -302,6 +373,16 @@ private struct StreakSummary {
             childTaskIDsByParent: input.childTaskIDsByParent,
             records: records
         )
+    }
+
+    /// The last `count` days ending today, oldest first. Backs the trend strip.
+    func recentDays(count: Int) -> [(date: Date, completion: ProgressDayCompletion)] {
+        (0..<count).reversed().compactMap { offset in
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else {
+                return nil
+            }
+            return (date: day, completion: completion(for: day))
+        }
     }
 
     var currentWeekRollup: WeekRollup? {

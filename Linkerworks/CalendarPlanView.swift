@@ -29,7 +29,7 @@ struct CalendarPlanView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: LWSpace.xl) {
                     monthView
                     agenda(for: selectedDate, showDateHeader: true)
 
@@ -37,14 +37,22 @@ struct CalendarPlanView: View {
                         showingManageRoutine = true
                     } label: {
                         Label("Manage routine", systemImage: "slider.horizontal.3")
-                            .font(.subheadline.weight(.medium))
+                            .font(LWFont.calloutMedium)
+                            .foregroundStyle(LWColor.accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, LWSpace.sm)
+                            .background(
+                                LWColor.accentMuted,
+                                in: RoundedRectangle(cornerRadius: LWRadius.md)
+                            )
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
                 }
-                .padding()
+                .padding(.horizontal, LWSpace.screenInset)
+                .padding(.top, LWSpace.xs)
+                .padding(.bottom, LWSpace.xxl)
             }
-            .background(TrainingLogTheme.background)
+            .background(LWColor.surface)
             .navigationTitle("Plan")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -88,35 +96,45 @@ struct CalendarPlanView: View {
     }
 
     private var monthView: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: LWSpace.sm) {
             HStack {
-                Button {
-                    moveMonth(by: -1)
-                } label: {
-                    Image(systemName: "chevron.left")
-                }
-                .accessibilityLabel("Previous month")
-
-                Spacer()
-
                 Text(displayedMonth, format: .dateTime.month(.wide).year())
-                    .font(.title.weight(.semibold))
+                    .font(LWFont.title)
+                    .foregroundStyle(LWColor.ink)
 
                 Spacer()
 
-                Button {
-                    moveMonth(by: 1)
-                } label: {
-                    Image(systemName: "chevron.right")
+                HStack(spacing: LWSpace.xs) {
+                    Button {
+                        moveMonth(by: -1)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 32, height: 32)
+                            .background(LWColor.surfaceSunken, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Previous month")
+
+                    Button {
+                        moveMonth(by: 1)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(width: 32, height: 32)
+                            .background(LWColor.surfaceSunken, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Next month")
                 }
-                .accessibilityLabel("Next month")
+                .foregroundStyle(LWColor.ink)
             }
 
-            LazyVGrid(columns: columns, spacing: 6) {
+            LazyVGrid(columns: columns, spacing: LWSpace.xxs) {
                 ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(LWColor.inkTertiary)
                         .frame(maxWidth: .infinity)
                 }
 
@@ -149,36 +167,46 @@ struct CalendarPlanView: View {
         let dailyEvents = events(on: date)
         let dailyAssignments = homeworkIntegrationEnabled ? assignments(on: date) : []
 
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: LWSpace.xs) {
             if showDateHeader {
-                HStack {
-                    Text(date, format: .dateTime.weekday(.wide).month().day())
-                        .font(.headline)
-                    Spacer()
-                }
+                Text(date, format: .dateTime.weekday(.wide).month().day())
+                    .font(LWFont.heading)
+                    .foregroundStyle(LWColor.inkSecondary)
+                    .padding(.horizontal, LWSpace.xxs)
             }
 
-            if dailyEvents.isEmpty && dailyAssignments.isEmpty {
-                Text("Nothing planned or due. Enjoy the space.")
-                    .font(.subheadline)
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
-                    .padding(.vertical, 6)
-            } else {
-                ForEach(dailyEvents) { event in
-                    Button {
-                        eventToEdit = event
-                        isPresentingEditor = true
-                    } label: {
-                        CalendarEventRow(event: event)
+            VStack(alignment: .leading, spacing: 0) {
+                if dailyEvents.isEmpty && dailyAssignments.isEmpty {
+                    Text("Nothing planned or due. Enjoy the space.")
+                        .font(LWFont.callout)
+                        .foregroundStyle(LWColor.inkSecondary)
+                        .padding(LWSpace.md)
+                } else {
+                    ForEach(Array(dailyEvents.enumerated()), id: \.element.id) { index, event in
+                        if index > 0 { LWRowDivider() }
+                        Button {
+                            eventToEdit = event
+                            isPresentingEditor = true
+                        } label: {
+                            CalendarEventRow(event: event)
+                                .padding(.horizontal, LWSpace.md)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                }
-                ForEach(dailyAssignments) { assignment in
-                    CalendarAssignmentRow(assignment: assignment)
+                    ForEach(Array(dailyAssignments.enumerated()), id: \.element.id) { index, assignment in
+                        if index > 0 || !dailyEvents.isEmpty { LWRowDivider() }
+                        CalendarAssignmentRow(assignment: assignment)
+                            .padding(.horizontal, LWSpace.md)
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(LWColor.surfaceRaised, in: RoundedRectangle(cornerRadius: LWRadius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: LWRadius.lg)
+                    .stroke(LWColor.hairline, lineWidth: LWStroke.hairline)
+            )
         }
-        .padding(.vertical, 4)
     }
 
     private var monthDates: [Date?] {
@@ -316,36 +344,41 @@ private struct CalendarDayCell: View {
     let hasCertificationExam: Bool
 
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: LWSpace.xxs) {
             Text(date, format: .dateTime.day())
-                .font(.body.weight(isSelected ? .semibold : .regular))
+                .font(isSelected ? LWFont.calloutMedium : LWFont.callout)
+                .monospacedDigit()
+
+            // Three distinct marks: events, assignments due, certification exam.
             HStack(spacing: 3) {
                 Circle()
-                    .fill(hasEvents ? TrainingLogTheme.primaryText : .clear)
+                    .fill(hasEvents ? (isSelected ? LWColor.onAccent : LWColor.accent) : .clear)
                     .frame(width: 4, height: 4)
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(hasAssignments ? TrainingLogTheme.completionAccent : .clear)
+                    .fill(hasAssignments ? (isSelected ? LWColor.onAccent : LWColor.warning) : .clear)
                     .frame(width: 7, height: 3)
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 7))
-                    .foregroundStyle(hasCertificationExam ? .orange : .clear)
+                Circle()
+                    .fill(hasCertificationExam ? (isSelected ? LWColor.onAccent : LWColor.danger) : .clear)
+                    .frame(width: 4, height: 4)
             }
+            .frame(height: 4)
         }
-        .foregroundStyle(isSelected ? TrainingLogTheme.background : TrainingLogTheme.primaryText)
+        .foregroundStyle(isSelected ? LWColor.onAccent : LWColor.ink)
         .frame(maxWidth: .infinity)
-        .frame(height: 42)
+        .frame(height: 44)
         .background {
             if isSelected {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(TrainingLogTheme.primaryText)
+                RoundedRectangle(cornerRadius: LWRadius.sm)
+                    .fill(LWColor.accent)
             }
         }
         .overlay {
             if isToday && !isSelected {
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(TrainingLogTheme.secondaryText, lineWidth: 1)
+                RoundedRectangle(cornerRadius: LWRadius.sm)
+                    .stroke(LWColor.accent, lineWidth: LWStroke.emphasis)
             }
         }
+        .animation(LWMotion.toggle, value: isSelected)
         .accessibilityLabel(date.formatted(date: .long, time: .omitted))
         .accessibilityValue(hasEvents || hasAssignments || hasCertificationExam ? "\(hasEvents ? "Has events" : "")\(hasEvents && (hasAssignments || hasCertificationExam) ? ", " : "")\(hasAssignments ? "Has assignments due" : "")\(hasAssignments && hasCertificationExam ? ", " : "")\(hasCertificationExam ? "Certification exam" : "")" : "Nothing scheduled")
     }
@@ -355,31 +388,34 @@ private struct CalendarEventRow: View {
     let event: CalendarEvent
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: LWSpace.sm) {
             Text(timeLabel)
-                .font(.caption.weight(.semibold))
+                .font(LWFont.monoSmall)
                 .monospacedDigit()
-                .foregroundStyle(TrainingLogTheme.secondaryText)
+                .foregroundStyle(LWColor.inkSecondary)
                 .frame(width: 76, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 4) {
+            Rectangle()
+                .fill(LWColor.accent.opacity(0.5))
+                .frame(width: 2)
+                .clipShape(Capsule())
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text(event.title)
+                    .font(LWFont.callout)
+                    .foregroundStyle(LWColor.ink)
                 if !event.notes.isEmpty {
                     Text(event.notes)
-                        .font(.caption)
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                        .font(LWFont.caption)
+                        .foregroundStyle(LWColor.inkSecondary)
                         .lineLimit(2)
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, LWSpace.xs)
+        .frame(minHeight: LWSpace.minTapTarget, alignment: .leading)
         .contentShape(Rectangle())
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(TrainingLogTheme.divider)
-                .frame(height: 1)
-        }
     }
 
     private var timeLabel: String {
@@ -394,25 +430,33 @@ private struct CalendarAssignmentRow: View {
     let assignment: Assignment
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: LWSpace.sm) {
             Text("Due")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(TrainingLogTheme.completionAccent)
+                .font(LWFont.captionMedium)
+                .foregroundStyle(LWColor.warning)
                 .frame(width: 76, alignment: .leading)
-            VStack(alignment: .leading, spacing: 4) {
+
+            Rectangle()
+                .fill(LWColor.warning.opacity(0.5))
+                .frame(width: 2)
+                .clipShape(Capsule())
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text(assignment.title)
-                HStack(spacing: 4) {
+                    .font(LWFont.callout)
+                    .foregroundStyle(LWColor.ink)
+                HStack(spacing: LWSpace.xxs) {
                     if let course = assignment.course { Text(course.name) }
                     Text(assignment.dueDate, format: .dateTime.hour().minute())
                         .monospacedDigit()
                 }
-                .font(.caption)
-                .foregroundStyle(TrainingLogTheme.secondaryText)
+                .font(LWFont.caption)
+                .foregroundStyle(LWColor.inkSecondary)
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 8)
-        .overlay(alignment: .bottom) { Rectangle().fill(TrainingLogTheme.divider).frame(height: 1) }
+        .padding(.vertical, LWSpace.xs)
+        .frame(minHeight: LWSpace.minTapTarget, alignment: .leading)
         .accessibilityLabel("Assignment due: \(assignment.title)")
     }
 }

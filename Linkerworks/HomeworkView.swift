@@ -202,7 +202,7 @@ struct HomeworkView: View {
                 if let color { Circle().fill(color).frame(width: 7, height: 7) }
                 Text(title).lineLimit(1)
             }
-            .font(.subheadline.weight(isSelected ? .semibold : .regular))
+            .font(isSelected ? LWFont.calloutMedium : LWFont.callout)
             .foregroundStyle(isSelected ? TrainingLogTheme.primaryText : TrainingLogTheme.secondaryText)
             .padding(.vertical, 8)
             .overlay(alignment: .bottom) { Rectangle().fill(isSelected ? TrainingLogTheme.primaryText : .clear).frame(height: 2) }
@@ -228,7 +228,7 @@ struct HomeworkView: View {
                             .foregroundStyle(assignment.usesDefaultTime ? TrainingLogTheme.secondaryText : TrainingLogTheme.primaryText)
                     }
                 }
-                .font(.caption)
+                .font(LWFont.caption)
                 .foregroundStyle(TrainingLogTheme.secondaryText)
             }
             Spacer(minLength: 8)
@@ -236,7 +236,7 @@ struct HomeworkView: View {
                 if isBulkSelecting { toggleSelection(assignment) } else { toggleDone(assignment) }
             } label: {
                 Image(systemName: assignment.isDone ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
+                    .font(LWFont.titleSmall)
                     .foregroundStyle(assignment.isDone ? TrainingLogTheme.completionAccent : TrainingLogTheme.secondaryText)
             }
             .buttonStyle(.plain)
@@ -445,28 +445,60 @@ private struct CoursesView: View {
         NavigationStack {
             List {
                 ForEach(courses.filter { $0.isArchived == showingArchived }) { course in
-                    HStack { Circle().fill(course.color).frame(width: 10, height: 10); Text(course.name); Spacer(); Text(course.term).foregroundStyle(TrainingLogTheme.secondaryText) }
-                        .contentShape(Rectangle()).onTapGesture { editorCourse = course }
-                        .swipeActions {
-                            Button(showingArchived ? "Restore" : "Archive") {
-                                course.isArchived.toggle()
-                                save()
-                            }
-                            .tint(TrainingLogTheme.secondaryText)
+                    HStack(spacing: LWSpace.sm) {
+                        Circle()
+                            .fill(course.color)
+                            .frame(width: 10, height: 10)
+
+                        Text(course.name)
+                            .font(LWFont.body)
+                            .foregroundStyle(LWColor.ink)
+
+                        Spacer(minLength: LWSpace.xs)
+
+                        Text(course.term)
+                            .font(LWFont.caption)
+                            .foregroundStyle(LWColor.inkSecondary)
+                    }
+                    .trainingLogRow()
+                    .onTapGesture { editorCourse = course }
+                    .swipeActions {
+                        Button(showingArchived ? "Restore" : "Archive") {
+                            course.isArchived.toggle()
+                            save()
                         }
+                        .tint(LWColor.neutral)
+                    }
                 }
                 .onMove(perform: move)
             }
             .trainingLogList().navigationTitle("Courses")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button(showingArchived ? "Active" : "Archived") { showingArchived.toggle() } }
-                ToolbarItem(placement: .topBarTrailing) { Button { showingNew = true } label: { Label("Add Course", systemImage: "plus") } }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(showingArchived ? "Active" : "Archived") {
+                        showingArchived.toggle()
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingNew = true
+                    } label: {
+                        Label("Add Course", systemImage: "plus")
+                    }
+                }
             }
             .sheet(isPresented: $showingNew) { CourseEditorView(course: nil) }
             .sheet(item: $editorCourse) { CourseEditorView(course: $0) }
         }.trainingLogNavigation()
     }
-    private func move(from: IndexSet, to: Int) { var items = courses.filter { $0.isArchived == showingArchived }; items.move(fromOffsets: from, toOffset: to); for (index, item) in items.enumerated() { item.sortOrder = index }; save() }
+    private func move(from: IndexSet, to: Int) {
+        var items = courses.filter { $0.isArchived == showingArchived }
+        items.move(fromOffsets: from, toOffset: to)
+        for (index, item) in items.enumerated() {
+            item.sortOrder = index
+        }
+        save()
+    }
     private func save() {
         do {
             try modelContext.save()
@@ -488,9 +520,106 @@ private struct CourseEditorView: View {
     @State private var colorHex: String
     @State private var error: String?
     private let palette = ["#D9A441", "#4FB3C4", "#8E7BD1", "#D9705C", "#6E8BA8", "#C46A8E", "#B8A184", "#7F8A93"]
-    init(course: Course?) { self.course = course; _name = State(initialValue: course?.name ?? ""); _term = State(initialValue: course?.term ?? ""); _colorHex = State(initialValue: course?.colorHex ?? "#D9A441") }
-    var body: some View { NavigationStack { Form { SwiftUI.Section("Course") { TextField("Course name", text: $name); TextField("Term", text: $term); Picker("Color", selection: $colorHex) { ForEach(palette, id: \.self) { hex in HStack { Circle().fill(Color(hex: hex)).frame(width: 12, height: 12); Text(hex) }.tag(hex) } } } }.trainingLogForm().navigationTitle(course == nil ? "Add Course" : "Edit Course").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() } } }.alert("Check Course", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(error ?? "") } }.trainingLogNavigation() }
-    private func save() { let clean = name.trimmingCharacters(in: .whitespacesAndNewlines); guard !clean.isEmpty else { error = "Enter a course name."; return }; let item = course ?? Course(name: clean, colorHex: colorHex, term: term, sortOrder: (courses.map(\.sortOrder).max() ?? -1) + 1); item.name = clean; item.term = term; item.colorHex = colorHex; if course == nil { modelContext.insert(item) }; do { try modelContext.save(); WidgetTimeline.reloadAll(); dismiss() } catch let saveFailure { error = saveFailure.localizedDescription } }
+    init(course: Course?) {
+        self.course = course
+        _name = State(initialValue: course?.name ?? "")
+        _term = State(initialValue: course?.term ?? "")
+        _colorHex = State(initialValue: course?.colorHex ?? "#D9A441")
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                SwiftUI.Section("Course") {
+                    TextField("Course name", text: $name)
+                    TextField("Term", text: $term)
+                }
+
+                SwiftUI.Section("Colour") {
+                    colorGrid
+                }
+            }
+            .trainingLogForm()
+            .navigationTitle(course == nil ? "Add Course" : "Edit Course")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                }
+            }
+            .alert(
+                "Check Course",
+                isPresented: Binding(
+                    get: { error != nil },
+                    set: { if !$0 { error = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(error ?? "")
+            }
+        }
+        .trainingLogNavigation()
+    }
+
+    /// Swatch grid rather than a `Picker` listing raw hex strings — the colour
+    /// is the thing being chosen, so show the colour.
+    private var colorGrid: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: LWSpace.sm), count: 4),
+            spacing: LWSpace.sm
+        ) {
+            ForEach(palette, id: \.self) { hex in
+                Button {
+                    colorHex = hex
+                } label: {
+                    Circle()
+                        .fill(Color(hex: hex))
+                        .frame(height: 34)
+                        .overlay {
+                            if colorHex == hex {
+                                Circle()
+                                    .strokeBorder(LWColor.ink, lineWidth: 2)
+                                    .padding(-3)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Colour \(hex)")
+                .accessibilityAddTraits(colorHex == hex ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, LWSpace.xs)
+    }
+
+    private func save() {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else {
+            error = "Enter a course name."
+            return
+        }
+
+        let item = course ?? Course(
+            name: clean,
+            colorHex: colorHex,
+            term: term,
+            sortOrder: (courses.map(\.sortOrder).max() ?? -1) + 1
+        )
+        item.name = clean
+        item.term = term
+        item.colorHex = colorHex
+        if course == nil { modelContext.insert(item) }
+
+        do {
+            try modelContext.save()
+            WidgetTimeline.reloadAll()
+            dismiss()
+        } catch let saveFailure {
+            error = saveFailure.localizedDescription
+        }
+    }
 }
 
 private extension Course { var color: Color { Color(hex: colorHex) } }

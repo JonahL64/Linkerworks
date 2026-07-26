@@ -5,11 +5,21 @@ import WidgetKit
 
 private let todayDeepLink = URL(string: "linkerworks://today")!
 
+/// Widget half of the Paper & Ink palette.
+///
+/// The widget target cannot see the app's `LWColor`, so the shared tokens live in
+/// both asset catalogues under the same names and are generated together by
+/// `gen_colorsets.py`. Keep the two catalogues in step — a colour added here
+/// must be added there.
 private enum WidgetTheme {
     static let background = Color("TrainingBackground")
     static let primaryText = Color("PrimaryText")
     static let secondaryText = Color("SecondaryText")
+    static let accent = Color("AccentColor")
     static let completionAccent = Color("CompletionAccent")
+
+    /// Fallback for an assignment with no course colour.
+    static let neutralCourse = Color("SecondaryText")
 }
 
 struct LinkerworksWidgetEntry: TimelineEntry {
@@ -79,16 +89,203 @@ struct LinkerworksWidgetProvider: TimelineProvider {
 struct LinkerworksWidgetEntryView: View {
     @Environment(\.widgetFamily) private var family
     let entry: LinkerworksWidgetEntry
-    var body: some View { Group { switch family { case .accessoryCircular: circular; case .accessoryRectangular: rectangular; case .systemMedium: medium; default: small } }.widgetURL(todayDeepLink).foregroundStyle(WidgetTheme.primaryText).containerBackground(WidgetTheme.background, for: .widget) }
-    private var small: some View { VStack(alignment: .leading, spacing: 6) { Text("NEXT").font(.caption.weight(.semibold)).foregroundStyle(WidgetTheme.secondaryText); content(task: entry.nextTask) }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading) }
-    private var medium: some View { HStack(spacing: 14) { ProgressView(value: Double(entry.completedCount), total: Double(max(entry.scheduledCount, 1))).tint(WidgetTheme.completionAccent).frame(width: 52).overlay { Text("\(entry.completedCount)/\(entry.scheduledCount)").font(.caption2).monospacedDigit() }; VStack(alignment: .leading, spacing: 5) { Text("NEXT").font(.caption.weight(.semibold)).foregroundStyle(WidgetTheme.secondaryText); if entry.loadState == .loaded { ForEach(entry.tasks) { task in Button(intent: CompleteRoutineTaskIntent(taskID: task.id.uuidString)) { HStack { Image(systemName: "circle"); Text(task.title).lineLimit(1); Spacer() } }.buttonStyle(.plain) } } else { Text("Open Linkerworks to load today").font(.caption) } } }.frame(maxWidth: .infinity, maxHeight: .infinity) }
-    @ViewBuilder private func content(task: LinkerworksWidgetEntry.NextTask?) -> some View { if entry.loadState == .unavailable { Text("Open Linkerworks to load today").font(.caption).foregroundStyle(WidgetTheme.secondaryText) } else if let task { Button(intent: CompleteRoutineTaskIntent(taskID: task.id.uuidString)) { VStack(alignment: .leading) { Text(task.title).font(.headline.weight(.semibold)).lineLimit(2) }.buttonStyle(.plain) } } else if entry.isNeutralDay { Label("No tasks to count", systemImage: "minus.circle.fill").font(.subheadline) } else { Label("Day complete", systemImage: "checkmark.circle.fill").foregroundStyle(WidgetTheme.completionAccent) } }
-    private var circular: some View { Group { if entry.loadState == .unavailable { Image(systemName: "exclamationmark") } else if let task = entry.nextTask { Text(task.title).font(.system(size: 10)).lineLimit(2).minimumScaleFactor(0.35) } else { Image(systemName: entry.isNeutralDay ? "minus" : "checkmark") } }.widgetAccentable() }
-    private var rectangular: some View { VStack(alignment: .leading, spacing: 2) { if entry.loadState == .unavailable { Label("Open Linkerworks", systemImage: "exclamationmark.circle") } else if let task = entry.nextTask { Text("\(entry.completedCount)/\(entry.scheduledCount) · Next: \(task.title)").font(.caption).lineLimit(1) } else { Text(entry.isNeutralDay ? "No tasks to count" : "Day complete").font(.caption) } }.frame(maxWidth: .infinity, alignment: .leading) }
+
+    var body: some View {
+        Group {
+            switch family {
+            case .accessoryCircular: circular
+            case .accessoryRectangular: rectangular
+            case .systemMedium: medium
+            default: small
+            }
+        }
+        .widgetURL(todayDeepLink)
+        .foregroundStyle(WidgetTheme.primaryText)
+        .containerBackground(WidgetTheme.background, for: .widget)
+    }
+
+    private var small: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            header
+            content(task: entry.nextTask)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    private var medium: some View {
+        HStack(spacing: 14) {
+            progressRing
+
+            VStack(alignment: .leading, spacing: 5) {
+                header
+
+                if entry.loadState == .loaded {
+                    ForEach(entry.tasks) { task in
+                        Button(intent: CompleteRoutineTaskIntent(taskID: task.id.uuidString)) {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .strokeBorder(WidgetTheme.secondaryText, lineWidth: 1.5)
+                                    .frame(width: 13, height: 13)
+                                Text(task.title)
+                                    .font(.system(size: 14))
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else {
+                    Text("Open Linkerworks to load today")
+                        .font(.system(size: 12))
+                        .foregroundStyle(WidgetTheme.secondaryText)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Sentence-case section label — the widget used a tracked-out "NEXT".
+    private var header: some View {
+        Text("Next")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(WidgetTheme.accent)
+    }
+
+    /// Ring rather than a bar: matches the Today hero.
+    private var progressRing: some View {
+        let fraction = entry.scheduledCount > 0
+            ? Double(entry.completedCount) / Double(entry.scheduledCount)
+            : 0
+
+        return ZStack {
+            Circle()
+                .stroke(WidgetTheme.secondaryText.opacity(0.25), lineWidth: 6)
+            Circle()
+                .trim(from: 0, to: fraction)
+                .stroke(
+                    fraction >= 1 ? WidgetTheme.completionAccent : WidgetTheme.accent,
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+            Text("\(entry.completedCount)/\(entry.scheduledCount)")
+                .font(.system(size: 12, weight: .medium, design: .serif))
+                .monospacedDigit()
+        }
+        .frame(width: 56, height: 56)
+    }
+
+    @ViewBuilder
+    private func content(task: LinkerworksWidgetEntry.NextTask?) -> some View {
+        if entry.loadState == .unavailable {
+            Text("Open Linkerworks to load today")
+                .font(.system(size: 12))
+                .foregroundStyle(WidgetTheme.secondaryText)
+        } else if let task {
+            Button(intent: CompleteRoutineTaskIntent(taskID: task.id.uuidString)) {
+                Text(task.title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+        } else if entry.isNeutralDay {
+            Label("No tasks to count", systemImage: "minus.circle")
+                .font(.system(size: 14))
+                .foregroundStyle(WidgetTheme.secondaryText)
+        } else {
+            Label("Day complete", systemImage: "checkmark.circle.fill")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(WidgetTheme.completionAccent)
+        }
+    }
+
+    private var circular: some View {
+        Group {
+            if entry.loadState == .unavailable {
+                Image(systemName: "exclamationmark")
+            } else if let task = entry.nextTask {
+                Text(task.title)
+                    .font(.system(size: 10))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.35)
+            } else {
+                Image(systemName: entry.isNeutralDay ? "minus" : "checkmark")
+            }
+        }
+        .widgetAccentable()
+    }
+
+    private var rectangular: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if entry.loadState == .unavailable {
+                Label("Open Linkerworks", systemImage: "exclamationmark.circle")
+            } else if let task = entry.nextTask {
+                Text("\(entry.completedCount)/\(entry.scheduledCount) · Next: \(task.title)")
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+            } else {
+                Text(entry.isNeutralDay ? "No tasks to count" : "Day complete")
+                    .font(.system(size: 13))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
 
 struct LinkerworksWidget: Widget { let kind = WidgetTimeline.routineKind; var body: some WidgetConfiguration { StaticConfiguration(kind: kind, provider: LinkerworksWidgetProvider()) { LinkerworksWidgetEntryView(entry: $0) }.configurationDisplayName("Next Task").description("Today’s routine progress and next work.").supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular]) } }
 
 struct LinkerworksAssignmentWidget: Widget { let kind = WidgetTimeline.assignmentKind; var body: some WidgetConfiguration { StaticConfiguration(kind: kind, provider: LinkerworksWidgetProvider()) { entry in AssignmentWidgetView(entry: entry) }.configurationDisplayName("Next Assignment Due").description("Your nearest unfinished assignment.").supportedFamilies([.systemSmall, .systemMedium]) } }
-private struct AssignmentWidgetView: View { let entry: LinkerworksWidgetEntry; var body: some View { VStack(alignment: .leading, spacing: 6) { Text("DUE NEXT").font(.caption.weight(.semibold)).foregroundStyle(WidgetTheme.secondaryText); if entry.loadState == .unavailable { Text("Open Linkerworks to load assignments").font(.caption) } else if let item = entry.assignment { HStack(spacing: 6) { Circle().fill(Color(hex: item.courseColorHex ?? "#7A857F")).frame(width: 8, height: 8); Text(item.courseName ?? "No course").font(.caption).foregroundStyle(WidgetTheme.secondaryText) }; Text(item.title).font(.headline).lineLimit(2); Text(item.dueDate, format: .dateTime.weekday(.abbreviated).hour().minute()).font(.caption).monospacedDigit() } else { Label("Nothing due", systemImage: "checkmark.circle").font(.subheadline) } }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading).widgetURL(todayDeepLink).containerBackground(WidgetTheme.background, for: .widget) } }
-private extension Color { init(hex: String) { let value = UInt64(hex.dropFirst(), radix: 16) ?? 0; self.init(red: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255) } }
+private struct AssignmentWidgetView: View {
+    let entry: LinkerworksWidgetEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Due next")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(WidgetTheme.accent)
+
+            if entry.loadState == .unavailable {
+                Text("Open Linkerworks to load assignments")
+                    .font(.system(size: 12))
+                    .foregroundStyle(WidgetTheme.secondaryText)
+            } else if let item = entry.assignment {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(item.courseColorHex.map(Color.init(hex:)) ?? WidgetTheme.neutralCourse)
+                        .frame(width: 8, height: 8)
+                    Text(item.courseName ?? "No course")
+                        .font(.system(size: 12))
+                        .foregroundStyle(WidgetTheme.secondaryText)
+                }
+
+                Text(item.title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .lineLimit(2)
+
+                Text(item.dueDate, format: .dateTime.weekday(.abbreviated).hour().minute())
+                    .font(.system(size: 12, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(WidgetTheme.secondaryText)
+            } else {
+                Label("Nothing due", systemImage: "checkmark.circle")
+                    .font(.system(size: 14))
+                    .foregroundStyle(WidgetTheme.completionAccent)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .widgetURL(todayDeepLink)
+        .containerBackground(WidgetTheme.background, for: .widget)
+    }
+}
+
+private extension Color {
+    init(hex: String) {
+        let value = UInt64(hex.dropFirst(), radix: 16) ?? 0
+        self.init(
+            red: Double((value >> 16) & 255) / 255,
+            green: Double((value >> 8) & 255) / 255,
+            blue: Double(value & 255) / 255
+        )
+    }
+}

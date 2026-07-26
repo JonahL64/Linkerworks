@@ -142,7 +142,7 @@ struct NutritionView: View {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(entry.foodName).lineLimit(1)
                                     Text("\(entry.calories) kcal · \(entry.mealCategory.displayName)")
-                                        .font(.caption).monospacedDigit()
+                                        .font(LWFont.caption).monospacedDigit()
                                         .foregroundStyle(TrainingLogTheme.secondaryText)
                                 }
                                 .frame(width: 150, alignment: .leading)
@@ -167,7 +167,7 @@ struct NutritionView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(meal.foodName)
                             Text("\(meal.calories) kcal · \(meal.mealCategory.displayName)")
-                                .font(.caption)
+                                .font(LWFont.caption)
                                 .monospacedDigit()
                                 .foregroundStyle(TrainingLogTheme.secondaryText)
                         }
@@ -178,7 +178,7 @@ struct NutritionView: View {
                         Button("×1") { quickLogMeal = QuickLogMeal(meal: meal, multiplier: 1) }
                         Button("×1.5") { quickLogMeal = QuickLogMeal(meal: meal, multiplier: 1.5) }
                         Button("×2") { quickLogMeal = QuickLogMeal(meal: meal, multiplier: 2) }
-                    }.font(.caption.monospacedDigit())
+                    }.font(LWFont.monoSmall).monospacedDigit()
                     }
                     .trainingLogRow()
                     .accessibilityLabel("Log \(meal.foodName) for \(selectedDate.formatted(date: .long, time: .omitted))")
@@ -369,18 +369,44 @@ private struct NutritionSummaryRow: View {
         return "Met"
     }
 
+    private var fraction: Double {
+        guard target > 0 else { return 0 }
+        return Double(logged) / Double(target)
+    }
+
+    /// Over target is a warning, not a success — the old row rendered every
+    /// state in the same neutral grey.
+    private var tint: Color {
+        guard target > 0 else { return LWColor.accent }
+        return logged > target ? LWColor.warning : LWColor.accent
+    }
+
     var body: some View {
-        HStack {
-            Text(label)
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(logged) / \(target) \(unit)  ·  \(max(0, target - logged)) left")
+        VStack(alignment: .leading, spacing: LWSpace.xs) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(label)
+                    .font(LWFont.callout)
+                    .foregroundStyle(LWColor.ink)
+
+                Spacer(minLength: LWSpace.xs)
+
+                Text("\(logged) / \(target) \(unit)")
+                    .font(LWFont.monoSmall)
                     .monospacedDigit()
-                Text(status)
-                    .font(.caption)
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                    .foregroundStyle(LWColor.ink)
             }
+
+            LWProgressBar(progress: fraction, tint: tint)
+
+            Text(status)
+                .font(LWFont.caption)
+                .monospacedDigit()
+                .foregroundStyle(logged > target ? LWColor.warning : LWColor.inkSecondary)
         }
+        .padding(.vertical, LWSpace.xxs)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(label)
+        .accessibilityValue("\(logged) of \(target) \(unit). \(status)")
     }
 }
 
@@ -399,7 +425,7 @@ private struct SavedMealManagerView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(meal.foodName)
                             Text("\(meal.mealCategory.displayName) · \(meal.calories) kcal · P \(meal.proteinGrams)g · C \(meal.carbohydrateGrams)g · F \(meal.fatGrams)g · Fiber \(meal.fiberGrams)g")
-                                .font(.caption).monospacedDigit().foregroundStyle(TrainingLogTheme.secondaryText)
+                                .font(LWFont.caption).monospacedDigit().foregroundStyle(TrainingLogTheme.secondaryText)
                         }
                     }.buttonStyle(.plain).trainingLogRow()
                 }
@@ -441,24 +467,81 @@ private struct SavedMealEditorView: View {
 
     init(meal: SavedMeal) {
         self.meal = meal
-        _name = State(initialValue: meal.foodName); _category = State(initialValue: meal.mealCategory)
-        _calories = State(initialValue: String(meal.calories)); _protein = State(initialValue: String(meal.proteinGrams)); _carbs = State(initialValue: String(meal.carbohydrateGrams)); _fat = State(initialValue: String(meal.fatGrams)); _fiber = State(initialValue: String(meal.fiberGrams))
+        _name = State(initialValue: meal.foodName)
+        _category = State(initialValue: meal.mealCategory)
+        _calories = State(initialValue: String(meal.calories))
+        _protein = State(initialValue: String(meal.proteinGrams))
+        _carbs = State(initialValue: String(meal.carbohydrateGrams))
+        _fat = State(initialValue: String(meal.fatGrams))
+        _fiber = State(initialValue: String(meal.fiberGrams))
     }
+
     var body: some View {
-        NavigationStack { Form {
-            TextField("Name", text: $name)
-            Picker("Category", selection: $category) { ForEach(MealCategory.allCases) { Text($0.displayName).tag($0) } }
-            number("Calories", $calories); number("Protein", $protein); number("Carbohydrates", $carbs); number("Fat", $fat); number("Fiber", $fiber)
-        }.trainingLogForm().navigationTitle("Edit Saved Meal").toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) { Button("Save") { save() } }
-        }}.trainingLogNavigation()
+        NavigationStack {
+            Form {
+                SwiftUI.Section("Meal") {
+                    TextField("Name", text: $name)
+                    Picker("Category", selection: $category) {
+                        ForEach(MealCategory.allCases) {
+                            Text($0.displayName).tag($0)
+                        }
+                    }
+                }
+
+                SwiftUI.Section("Macros") {
+                    number("Calories", $calories)
+                    number("Protein", $protein)
+                    number("Carbohydrates", $carbs)
+                    number("Fat", $fat)
+                    number("Fiber", $fiber)
+                }
+            }
+            .trainingLogForm()
+            .navigationTitle("Edit Saved Meal")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                }
+            }
+        }
+        .trainingLogNavigation()
     }
-    private func number(_ label: String, _ value: Binding<String>) -> some View { TextField(label, text: value).keyboardType(.numberPad) }
+
+    private func number(_ label: String, _ value: Binding<String>) -> some View {
+        LabeledContent(label) {
+            TextField(label, text: value)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .font(LWFont.mono)
+                .monospacedDigit()
+        }
+    }
+
     private func save() {
-        guard let calories = Int(calories), let protein = Int(protein), let carbs = Int(carbs), let fat = Int(fat), let fiber = Int(fiber), !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, [calories, protein, carbs, fat, fiber].allSatisfy({ $0 >= 0 }) else { return }
-        meal.foodName = name.trimmingCharacters(in: .whitespacesAndNewlines); meal.mealCategory = category; meal.calories = calories; meal.proteinGrams = protein; meal.carbohydrateGrams = carbs; meal.fatGrams = fat; meal.fiberGrams = fiber
-        try? modelContext.save(); dismiss()
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard
+            let calories = Int(calories),
+            let protein = Int(protein),
+            let carbs = Int(carbs),
+            let fat = Int(fat),
+            let fiber = Int(fiber),
+            !trimmedName.isEmpty,
+            [calories, protein, carbs, fat, fiber].allSatisfy({ $0 >= 0 })
+        else { return }
+
+        meal.foodName = trimmedName
+        meal.mealCategory = category
+        meal.calories = calories
+        meal.proteinGrams = protein
+        meal.carbohydrateGrams = carbs
+        meal.fatGrams = fat
+        meal.fiberGrams = fiber
+
+        try? modelContext.save()
+        dismiss()
     }
 }
 
@@ -469,7 +552,7 @@ private struct MealEntryRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(entry.foodName)
             Text("\(entry.calories) kcal · P \(entry.proteinGrams)g · C \(entry.carbohydrateGrams)g · F \(entry.fatGrams)g · Fiber \(entry.fiberGrams)g")
-                .font(.caption)
+                .font(LWFont.caption)
                 .monospacedDigit()
                 .foregroundStyle(TrainingLogTheme.secondaryText)
         }
@@ -488,10 +571,25 @@ private struct QuickLogMeal: Identifiable {
     let multiplier: Double
 
     init(meal: SavedMeal, multiplier: Double) {
-        defaultCategory = meal.mealCategory; foodName = meal.foodName; calories = meal.calories; proteinGrams = meal.proteinGrams; carbohydrateGrams = meal.carbohydrateGrams; fatGrams = meal.fatGrams; fiberGrams = meal.fiberGrams; self.multiplier = multiplier
+        defaultCategory = meal.mealCategory
+        foodName = meal.foodName
+        calories = meal.calories
+        proteinGrams = meal.proteinGrams
+        carbohydrateGrams = meal.carbohydrateGrams
+        fatGrams = meal.fatGrams
+        fiberGrams = meal.fiberGrams
+        self.multiplier = multiplier
     }
+
     init(entry: MealEntry) {
-        defaultCategory = entry.mealCategory; foodName = entry.foodName; calories = entry.calories; proteinGrams = entry.proteinGrams; carbohydrateGrams = entry.carbohydrateGrams; fatGrams = entry.fatGrams; fiberGrams = entry.fiberGrams; multiplier = 1
+        defaultCategory = entry.mealCategory
+        foodName = entry.foodName
+        calories = entry.calories
+        proteinGrams = entry.proteinGrams
+        carbohydrateGrams = entry.carbohydrateGrams
+        fatGrams = entry.fatGrams
+        fiberGrams = entry.fiberGrams
+        multiplier = 1
     }
 }
 
@@ -505,7 +603,7 @@ private struct MealCategoryPickerView: View {
     }
     var body: some View {
         NavigationStack { Form {
-            Text(meal.foodName).font(.headline)
+            Text(meal.foodName).font(LWFont.bodyStrong)
             Picker("Log as", selection: $category) { ForEach(MealCategory.allCases) { Text($0.displayName).tag($0) } }
         }.trainingLogForm().navigationTitle("Log Meal").toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -760,12 +858,39 @@ private struct MealEntryDraft {
     let fiberGrams: Int
     let saveAsFavorite: Bool
 
-    init(date: Date, category: MealCategory, foodName: String, calories: Int, proteinGrams: Int, carbohydrateGrams: Int, fatGrams: Int, fiberGrams: Int, saveAsFavorite: Bool = false) {
-        self.date = date; self.category = category; self.foodName = foodName; self.calories = calories; self.proteinGrams = proteinGrams; self.carbohydrateGrams = carbohydrateGrams; self.fatGrams = fatGrams; self.fiberGrams = fiberGrams; self.saveAsFavorite = saveAsFavorite
+    init(
+        date: Date,
+        category: MealCategory,
+        foodName: String,
+        calories: Int,
+        proteinGrams: Int,
+        carbohydrateGrams: Int,
+        fatGrams: Int,
+        fiberGrams: Int,
+        saveAsFavorite: Bool = false
+    ) {
+        self.date = date
+        self.category = category
+        self.foodName = foodName
+        self.calories = calories
+        self.proteinGrams = proteinGrams
+        self.carbohydrateGrams = carbohydrateGrams
+        self.fatGrams = fatGrams
+        self.fiberGrams = fiberGrams
+        self.saveAsFavorite = saveAsFavorite
     }
 
     init(entry: MealEntry) {
-        self.init(date: entry.date, category: entry.mealCategory, foodName: entry.foodName, calories: entry.calories, proteinGrams: entry.proteinGrams, carbohydrateGrams: entry.carbohydrateGrams, fatGrams: entry.fatGrams, fiberGrams: entry.fiberGrams)
+        self.init(
+            date: entry.date,
+            category: entry.mealCategory,
+            foodName: entry.foodName,
+            calories: entry.calories,
+            proteinGrams: entry.proteinGrams,
+            carbohydrateGrams: entry.carbohydrateGrams,
+            fatGrams: entry.fatGrams,
+            fiberGrams: entry.fiberGrams
+        )
     }
 }
 

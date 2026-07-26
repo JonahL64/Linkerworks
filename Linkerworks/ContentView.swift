@@ -33,12 +33,10 @@ struct ContentView: View {
                 }
                 .tag(AppTab.progress)
         }
-        .tint(TrainingLogTheme.primaryText)
-        .toolbarBackground(TrainingLogTheme.background, for: .tabBar)
+        .tint(LWColor.accent)
+        .toolbarBackground(LWColor.surface, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(.dark, for: .tabBar)
-        .background(TrainingLogTheme.background)
-        .preferredColorScheme(.dark)
+        .background(LWColor.surface)
         .onOpenURL { url in
             guard url.scheme == "linkerworks", url.host == "today" else { return }
             showingManageRoutine = false
@@ -177,25 +175,14 @@ private struct TodayView: View {
         NavigationStack {
             List {
                 SwiftUI.Section {
-                    HStack(spacing: 14) {
-                        ProgressRing(
-                            progress: progress,
-                            isPulsing: completionRingPulsing
-                        )
-                            .frame(width: 60, height: 60)
-                            .accessibilityLabel("Today's progress")
-                            .accessibilityValue("\(completedTopLevelTaskCount) of \(todayProgressCompletion.scheduledCount) top-level tasks completed")
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(today, format: .dateTime.weekday(.wide).month().day())
-                                .font(.title3.weight(.semibold))
-                            Text("\(completedTopLevelTaskCount) of \(todayProgressCompletion.scheduledCount) tasks complete")
-                                .font(.subheadline)
-                                .foregroundStyle(TrainingLogTheme.secondaryText)
-                        }
-                    }
-                    .padding(.vertical, 8)
-                    .listRowSeparator(.hidden)
+                    todayHero
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: LWSpace.xs,
+                            leading: 0,
+                            bottom: LWSpace.lg,
+                            trailing: 0
+                        ))
                 }
 
                 if homeworkIntegrationEnabled && (!dueTodayAssignments.isEmpty || overdueAssignmentCount > 0) {
@@ -218,9 +205,9 @@ private struct TodayView: View {
                         ActiveWorkoutBanner(workout: activeWorkout)
                     }
                     .buttonStyle(.plain)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                    .background(TrainingLogTheme.background)
+                    .padding(.horizontal, LWSpace.screenInset)
+                    .padding(.vertical, LWSpace.xs)
+                    .background(LWColor.surface)
                 }
             }
             .navigationTitle("Today")
@@ -274,22 +261,22 @@ private struct TodayView: View {
             } message: {
                 Text(saveErrorMessage ?? "")
             }
-            .overlay(alignment: .top) {
+            .overlay {
                 if completionMomentVisible {
-                    Text("DAY COMPLETE")
-                        .font(.caption.weight(.bold))
-                        .tracking(1.8)
-                        .foregroundStyle(TrainingLogTheme.completionAccent)
-                        .padding(.top, 8)
+                    DayCompleteMoment()
                         .transition(.opacity)
                 }
             }
             .overlay(alignment: .bottom) {
                 if let undoState {
-                    undoToast(undoState)
-                        .padding(.horizontal, TrainingLogTheme.contentInset)
-                        .padding(.bottom, 12)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    LWToast(
+                        message: "Completion changed",
+                        actionTitle: "Undo",
+                        action: { undoCompletion(undoState) }
+                    )
+                    .padding(.horizontal, LWSpace.screenInset)
+                    .padding(.bottom, LWSpace.sm)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .onAppear {
@@ -316,24 +303,91 @@ private struct TodayView: View {
         }
     }
 
+    /// The next thing to actually do — first scheduled task that is neither
+    /// complete nor skipped, in routine order.
+    private var nextTask: TaskItem? {
+        topLevelTasks.first { !isTaskComplete($0) && !isTaskSkipped($0) }
+    }
+
+    /// Screen header. Progress is the point of this app, so it gets real estate:
+    /// date, a large ring, and the next task promoted above the fold.
+    private var todayHero: some View {
+        VStack(alignment: .leading, spacing: LWSpace.md) {
+            HStack(alignment: .center, spacing: LWSpace.lg) {
+                VStack(alignment: .leading, spacing: LWSpace.xxs) {
+                    Text(today, format: .dateTime.weekday(.wide))
+                        .font(LWFont.title)
+                        .foregroundStyle(LWColor.ink)
+
+                    Text(today, format: .dateTime.month(.wide).day())
+                        .font(LWFont.callout)
+                        .foregroundStyle(LWColor.inkSecondary)
+
+                    Text("\(completedTopLevelTaskCount) of \(todayProgressCompletion.scheduledCount) complete")
+                        .font(LWFont.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(LWColor.inkSecondary)
+                        .padding(.top, LWSpace.xxs)
+                }
+
+                Spacer(minLength: LWSpace.sm)
+
+                LWProgressRing(
+                    progress: progress,
+                    size: 92,
+                    isPulsing: completionRingPulsing
+                )
+                .accessibilityLabel("Today's progress")
+                .accessibilityValue("\(completedTopLevelTaskCount) of \(todayProgressCompletion.scheduledCount) top-level tasks completed")
+            }
+
+            if let nextTask {
+                Divider().overlay(LWColor.hairline)
+
+                VStack(alignment: .leading, spacing: LWSpace.xxs) {
+                    Text("Next")
+                        .font(LWFont.caption)
+                        .foregroundStyle(LWColor.accent)
+
+                    Text(nextTask.title)
+                        .font(LWFont.bodyStrong)
+                        .foregroundStyle(LWColor.ink)
+
+                    if !nextTask.detail.isEmpty {
+                        Text(nextTask.detail)
+                            .font(LWFont.callout)
+                            .foregroundStyle(LWColor.inkSecondary)
+                            .lineLimit(2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Next up: \(nextTask.title)")
+            }
+        }
+        .lwBlock(padding: LWSpace.lg, radius: LWRadius.xl)
+    }
+
     private var dueTodaySection: some View {
         SwiftUI.Section {
             NavigationLink {
                 HomeworkView()
             } label: {
-                HStack {
-                    Text("DUE TODAY")
-                        .font(.caption.weight(.bold))
-                        .tracking(1.1)
-                    Spacer()
+                HStack(spacing: LWSpace.xs) {
+                    Text("Due today")
+                        .font(LWFont.heading)
+                        .foregroundStyle(LWColor.ink)
+                    Spacer(minLength: LWSpace.xs)
                     if overdueAssignmentCount > 0 {
-                        Text("\(overdueAssignmentCount) overdue")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(TrainingLogTheme.completionAccent)
+                        LWChip(
+                            text: "\(overdueAssignmentCount) overdue",
+                            tint: LWColor.danger,
+                            fill: LWColor.danger.opacity(0.12)
+                        )
                     }
                     Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(LWColor.inkTertiary)
                 }
             }
             .buttonStyle(.plain)
@@ -343,27 +397,38 @@ private struct TodayView: View {
             }
             if dueTodayAssignments.count > 3 {
                 Text("+\(dueTodayAssignments.count - 3) more due today")
-                    .font(.caption)
+                    .font(LWFont.caption)
                     .foregroundStyle(TrainingLogTheme.secondaryText)
             }
         }
     }
 
     private var savedMealsSection: some View {
-        SwiftUI.Section("EATING") {
+        SwiftUI.Section("Eating") {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: LWSpace.xs) {
                     ForEach(Array(savedMeals.prefix(4))) { meal in
                         Button { favoriteAwaitingCategory = meal } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(meal.foodName).lineLimit(1)
+                            VStack(alignment: .leading, spacing: LWSpace.xxs) {
+                                Text(meal.foodName)
+                                    .font(LWFont.calloutMedium)
+                                    .foregroundStyle(LWColor.ink)
+                                    .lineLimit(1)
                                 Text("\(meal.calories) kcal · \(meal.mealCategory.displayName)")
-                                    .font(.caption).monospacedDigit()
-                                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                                    .font(LWFont.caption)
+                                    .monospacedDigit()
+                                    .foregroundStyle(LWColor.inkSecondary)
                             }
-                            .frame(width: 145, alignment: .leading)
-                            .padding(10)
-                            .background(TrainingLogTheme.quietFill, in: RoundedRectangle(cornerRadius: 8))
+                            .frame(width: 150, alignment: .leading)
+                            .padding(LWSpace.sm)
+                            .background(
+                                LWColor.surfaceRaised,
+                                in: RoundedRectangle(cornerRadius: LWRadius.md)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: LWRadius.md)
+                                    .stroke(LWColor.hairline, lineWidth: LWStroke.hairline)
+                            )
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Log \(meal.foodName)")
@@ -414,7 +479,7 @@ private struct TodayView: View {
                     Text(assignment.dueDate, format: .dateTime.hour().minute())
                         .monospacedDigit()
                 }
-                .font(.caption)
+                .font(LWFont.caption)
                 .foregroundStyle(TrainingLogTheme.secondaryText)
             }
             Spacer(minLength: 8)
@@ -431,9 +496,7 @@ private struct TodayView: View {
                     saveErrorMessage = error.localizedDescription
                 }
             } label: {
-                Image(systemName: assignment.isDone ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(assignment.isDone ? TrainingLogTheme.completionAccent : TrainingLogTheme.secondaryText)
+                LWCheckControl(state: assignment.isDone ? .complete : .pending)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(assignment.isDone ? "Mark \(assignment.title) incomplete" : "Mark \(assignment.title) complete")
@@ -458,26 +521,34 @@ private struct TodayView: View {
                 manuallyExpandedCompletedPhases.remove(phase)
             }
         } label: {
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(phaseLabel)
-                        .trainingLogSectionLabel()
-                    Text(guidanceText)
-                        .font(.caption)
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
+            VStack(alignment: .leading, spacing: LWSpace.xs) {
+                HStack(spacing: LWSpace.xs) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(phaseLabel)
+                            .font(LWFont.heading)
+                            .foregroundStyle(LWColor.ink)
+                        Text(guidanceText)
+                            .font(LWFont.caption)
+                            .foregroundStyle(LWColor.inkSecondary)
+                    }
+
+                    Spacer(minLength: LWSpace.xs)
+
+                    Text("\(completed)/\(tasks.count)")
+                        .font(LWFont.monoSmall)
+                        .monospacedDigit()
+                        .foregroundStyle(LWColor.inkSecondary)
+
+                    Image(systemName: isPhaseCollapsed(phase) ? "chevron.right" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(LWColor.inkTertiary)
                 }
 
-                Spacer(minLength: 8)
-
-                Text("\(completed)/\(tasks.count)")
-                    .font(.caption.weight(.medium))
-                    .monospacedDigit()
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
-
-                Image(systemName: isPhaseCollapsed(phase) ? "chevron.right" : "chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                LWProgressBar(
+                    progress: tasks.isEmpty ? 0 : Double(completed) / Double(tasks.count)
+                )
             }
+            .padding(.vertical, LWSpace.xs)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -536,20 +607,25 @@ private struct TodayView: View {
         hideCompleted && isTaskComplete(task)
     }
 
+    /// Current-time marker. An accent rule with the actual time, rather than a
+    /// tracked-out "NOW" caption.
     private var nowDivider: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: LWSpace.xs) {
+            Circle()
+                .fill(LWColor.accent)
+                .frame(width: 5, height: 5)
+
+            Text(currentTime, format: .dateTime.hour().minute())
+                .font(LWFont.monoSmall)
+                .monospacedDigit()
+                .foregroundStyle(LWColor.accent)
+
             Rectangle()
-                .fill(TrainingLogTheme.divider)
-                .frame(height: 1)
-            Text("NOW")
-                .font(.caption2.weight(.semibold))
-                .tracking(0.8)
-                .foregroundStyle(TrainingLogTheme.secondaryText)
-            Rectangle()
-                .fill(TrainingLogTheme.divider)
-                .frame(height: 1)
+                .fill(LWColor.accent.opacity(0.35))
+                .frame(height: LWStroke.hairline)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, LWSpace.xxs)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Now. Upcoming tasks follow")
     }
 
@@ -558,42 +634,46 @@ private struct TodayView: View {
         let isCompleted = isTaskComplete(task)
         let isSkipped = isTaskSkipped(task)
 
-        let label = HStack(alignment: .top, spacing: 12) {
-            Image(systemName: isSkipped ? "forward.circle.fill" : (isCompleted ? "checkmark.circle.fill" : "circle"))
-                .font(isSubstep ? .body : .title3)
-                .foregroundStyle(
-                    isSkipped
-                        ? TrainingLogTheme.secondaryText
-                        : isCompleted
-                        ? TrainingLogTheme.completionAccent
-                        : TrainingLogTheme.secondaryText
-                )
+        let state: LWTaskState = {
+            if isSkipped { return .skipped }
+            if isParentSummary { return isCompleted ? .parentComplete : .parentIncomplete }
+            return isCompleted ? .complete : .pending
+        }()
+
+        let label = HStack(alignment: .top, spacing: LWSpace.sm) {
+            LWCheckControl(state: state, size: isSubstep ? 20 : 24)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: LWSpace.xxs) {
                 Text(task.title)
-                    .foregroundStyle(isSkipped ? TrainingLogTheme.secondaryText : TrainingLogTheme.primaryText)
+                    .font(isSubstep ? LWFont.callout : LWFont.body)
+                    .foregroundStyle(
+                        isSkipped
+                            ? LWColor.inkTertiary
+                            : isCompleted ? LWColor.inkSecondary : LWColor.ink
+                    )
+                    .strikethrough(isSkipped, color: LWColor.inkTertiary)
 
                 if !task.detail.isEmpty {
                     Text(task.detail)
-                        .font(.caption)
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                        .font(LWFont.caption)
+                        .foregroundStyle(LWColor.inkSecondary)
                         .multilineTextAlignment(.leading)
                 }
 
                 if isSkipped {
                     Text("Skipped — excluded from progress")
-                        .font(.caption)
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                        .font(LWFont.caption)
+                        .foregroundStyle(LWColor.inkTertiary)
                 } else if isParentSummary {
                     Text(isCompleted ? "All sub-steps complete" : "Complete sub-steps")
-                        .font(.caption)
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                        .font(LWFont.caption)
+                        .foregroundStyle(LWColor.inkSecondary)
                 }
             }
             .contentShape(Rectangle())
 
-            Spacer(minLength: 12)
+            Spacer(minLength: LWSpace.sm)
 
         }
 
@@ -603,7 +683,7 @@ private struct TodayView: View {
                     .trainingLogRow()
                     .contentShape(Rectangle())
                     .gesture(parentControlGesture(for: task))
-                    .animation(.snappy, value: isCompleted)
+                    .animation(LWMotion.toggle, value: isCompleted)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("\(task.title), \(isSkipped ? "Skipped" : (isCompleted ? "Completed from sub-steps" : "Sub-steps incomplete"))")
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -623,7 +703,7 @@ private struct TodayView: View {
             .accessibilityLabel(isSubstep ? "Sub-step: \(task.title)" : task.title)
             .accessibilityValue(isSkipped ? "Skipped" : (isCompleted ? "Completed" : "Not completed"))
             .accessibilityHint("Double tap to \(isCompleted ? "mark incomplete" : "mark complete")")
-            .animation(.snappy, value: isCompleted)
+            .animation(LWMotion.toggle, value: isCompleted)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 skipAction(for: task, isSkipped: isSkipped)
             }
@@ -860,28 +940,6 @@ private struct TodayView: View {
         }
     }
 
-    private func undoToast(_ undo: CompletionUndo) -> some View {
-        HStack(spacing: 12) {
-            Text("Completion changed")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(TrainingLogTheme.primaryText)
-            Spacer(minLength: 8)
-            Button("Undo") {
-                undoCompletion(undo)
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(TrainingLogTheme.completionAccent)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(TrainingLogTheme.quietFill, in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(TrainingLogTheme.divider, lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
-    }
-
     private func undoCompletion(_ undo: CompletionUndo) {
         let currentRecords = completionRecords.filter {
             undo.taskIDs.contains($0.taskId) && calendar.isDate($0.date, inSameDayAs: today)
@@ -973,24 +1031,12 @@ private struct ActiveWorkoutBanner: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            HStack(spacing: 10) {
-                Image(systemName: "figure.strengthtraining.traditional")
-                    .foregroundStyle(TrainingLogTheme.completionAccent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(displayTitle)
-                        .font(.subheadline.weight(.semibold))
-                    Text("\(elapsedText(at: context.date))  ·  \(setCount) SETS")
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
-                }
-                Spacer()
-                Text("RESUME")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(TrainingLogTheme.completionAccent)
-            }
-            .padding(10)
-            .background(TrainingLogTheme.background.opacity(0.98))
+            LWBanner(
+                title: displayTitle,
+                subtitle: "\(elapsedText(at: context.date))  ·  \(setCount) sets",
+                tint: LWColor.warning,
+                systemImage: "figure.strengthtraining.traditional"
+            )
         }
     }
 
@@ -1001,34 +1047,53 @@ private struct ActiveWorkoutBanner: View {
 
     private var displayTitle: String {
         let title = workout.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return title.isEmpty ? "WORKOUT IN PROGRESS" : title
+        return title.isEmpty ? "Workout in progress" : title
     }
 }
 
-private struct ProgressRing: View {
-    let progress: Double
-    let isPulsing: Bool
+/// The one signature beat: finishing every task for the day.
+///
+/// A serif mark that scales in over a dimmed screen, rather than the caption-sized
+/// string that used to fade in at the top edge.
+private struct DayCompleteMoment: View {
+    @State private var appeared = false
 
     var body: some View {
         ZStack {
-            Circle()
-                .stroke(TrainingLogTheme.divider, lineWidth: 8)
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    TrainingLogTheme.completionAccent,
-                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-            Text(progress, format: .percent.precision(.fractionLength(0)))
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
+            LWColor.surface.opacity(0.86)
+                .ignoresSafeArea()
+
+            VStack(spacing: LWSpace.md) {
+                ZStack {
+                    Circle()
+                        .strokeBorder(LWColor.success, lineWidth: 2)
+                        .frame(width: 96, height: 96)
+                        .scaleEffect(appeared ? 1 : 0.7)
+                        .opacity(appeared ? 1 : 0)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundStyle(LWColor.success)
+                        .scaleEffect(appeared ? 1 : 0.4)
+                }
+
+                VStack(spacing: LWSpace.xxs) {
+                    Text("Day complete")
+                        .font(LWFont.title)
+                        .foregroundStyle(LWColor.ink)
+
+                    Text("Every scheduled task done.")
+                        .font(LWFont.callout)
+                        .foregroundStyle(LWColor.inkSecondary)
+                }
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 8)
+            }
         }
-        .scaleEffect(isPulsing ? 1.12 : 1)
-        .animation(
-            .spring(response: 0.3, dampingFraction: 0.52),
-            value: isPulsing
-        )
-        .animation(.easeOut(duration: 0.35), value: progress)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Day complete. Every scheduled task done.")
+        .onAppear {
+            withAnimation(LWMotion.celebrate) { appeared = true }
+        }
     }
 }

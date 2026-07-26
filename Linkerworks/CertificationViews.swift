@@ -65,20 +65,47 @@ private struct CertificationRow: View {
     let certification: Certification
     private var orderedMilestones: [CertMilestone] { certification.milestones.sorted { $0.sortOrder < $1.sortOrder } }
 
+    private var doneCount: Int { orderedMilestones.filter(\.isDone).count }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: LWSpace.xs) {
             Text(certification.name)
-            if let days = CertificationSupport.daysUntil(certification.targetDate) {
-                Text(days >= 0 ? "Exam in \(days) day\(days == 1 ? "" : "s")" : "Exam was \(-days) day\(-days == 1 ? "" : "s") ago")
-                    .font(.caption).monospacedDigit().foregroundStyle(TrainingLogTheme.secondaryText)
+                .font(LWFont.bodyMedium)
+                .foregroundStyle(LWColor.ink)
+
+            HStack(spacing: LWSpace.xs) {
+                if let days = CertificationSupport.daysUntil(certification.targetDate) {
+                    Text(days >= 0
+                        ? "Exam in \(days) day\(days == 1 ? "" : "s")"
+                        : "Exam was \(-days) day\(-days == 1 ? "" : "s") ago")
+                        .font(LWFont.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(days >= 0 ? LWColor.inkSecondary : LWColor.danger)
+                }
+
+                if CertificationSupport.expiresWithin90Days(certification.expiresOn) {
+                    LWChip(
+                        text: "Expires \(certification.expiresOn!.formatted(.dateTime.month().day()))",
+                        tint: LWColor.warning,
+                        fill: LWColor.warning.opacity(0.12)
+                    )
+                }
             }
-            Text("\(orderedMilestones.filter(\.isDone).count) of \(orderedMilestones.count) milestones")
-                .font(.caption).foregroundStyle(TrainingLogTheme.secondaryText)
-            if CertificationSupport.expiresWithin90Days(certification.expiresOn) {
-                Text("Expires \(certification.expiresOn!, format: .dateTime.month().day().year())")
-                    .font(.caption.weight(.semibold)).foregroundStyle(.orange)
+
+            if !orderedMilestones.isEmpty {
+                HStack(spacing: LWSpace.xs) {
+                    LWProgressBar(
+                        progress: Double(doneCount) / Double(orderedMilestones.count),
+                        tint: Domain.certifications.tint
+                    )
+                    Text("\(doneCount)/\(orderedMilestones.count)")
+                        .font(LWFont.monoSmall)
+                        .monospacedDigit()
+                        .foregroundStyle(LWColor.inkSecondary)
+                }
             }
         }
+        .trainingLogRow()
     }
 }
 
@@ -103,17 +130,38 @@ struct CertificationDetailView: View {
                 LabeledContent("Status", value: certification.status.capitalized)
                 if CertificationSupport.expiresWithin90Days(certification.expiresOn) {
                     Text("Expires \(certification.expiresOn!, format: .dateTime.month().day().year())")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(LWColor.warning)
                 }
             }
             SwiftUI.Section("Milestones") {
                 ForEach(orderedMilestones, id: \.persistentModelID) { milestone in
-                    Button { toggle(milestone) } label: {
-                        Label(milestone.title, systemImage: milestone.isDone ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(milestone.isDone ? TrainingLogTheme.completionAccent : TrainingLogTheme.primaryText)
-                    }.buttonStyle(.plain)
+                    Button {
+                        toggle(milestone)
+                    } label: {
+                        HStack(spacing: LWSpace.sm) {
+                            LWCheckControl(
+                                state: milestone.isDone ? .complete : .pending,
+                                size: 22
+                            )
+                            Text(milestone.title)
+                                .font(LWFont.callout)
+                                .foregroundStyle(
+                                    milestone.isDone ? LWColor.inkSecondary : LWColor.ink
+                                )
+                            Spacer(minLength: 0)
+                        }
+                        .trainingLogRow()
+                    }
+                    .buttonStyle(.plain)
                 }
-                HStack { TextField("Add milestone", text: $milestoneTitle); Button("Add", action: addMilestone).disabled(milestoneTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+
+                HStack(spacing: LWSpace.xs) {
+                    TextField("Add milestone", text: $milestoneTitle)
+                    Button("Add", action: addMilestone)
+                        .font(LWFont.calloutMedium)
+                        .foregroundStyle(LWColor.accent)
+                        .disabled(milestoneTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
             }
             SwiftUI.Section("Routine study") {
                 if let linkedTask { Text(linkedTask.title) } else { Text("No linked study task").foregroundStyle(TrainingLogTheme.secondaryText) }
@@ -121,9 +169,24 @@ struct CertificationDetailView: View {
             }
             if let notes = certification.notes, !notes.isEmpty { SwiftUI.Section("Notes") { Text(notes) } }
         }
-        .trainingLogList().navigationTitle(certification.name)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Edit") { showingEditor = true } } }
-        .sheet(isPresented: $showingEditor) { CertificationEditorView(certification: certification) { _ in do { try modelContext.save(); return true } catch { modelContext.rollback(); return false } } }
+        .trainingLogList()
+        .navigationTitle(certification.name)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Edit") { showingEditor = true }
+            }
+        }
+        .sheet(isPresented: $showingEditor) {
+            CertificationEditorView(certification: certification) { _ in
+                do {
+                    try modelContext.save()
+                    return true
+                } catch {
+                    modelContext.rollback()
+                    return false
+                }
+            }
+        }
         .alert("Unable to Save", isPresented: $saveError) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -183,20 +246,96 @@ private struct CertificationEditorView: View {
     @State private var saveError = false
 
     init(certification: Certification?, onSaved: @escaping (Certification) -> Bool) {
-        self.certification = certification; self.onSaved = onSaved
+        self.certification = certification
+        self.onSaved = onSaved
         _name = State(initialValue: certification?.name ?? "")
-        _hasTargetDate = State(initialValue: certification?.targetDate != nil); _targetDate = State(initialValue: certification?.targetDate ?? Date())
+        _hasTargetDate = State(initialValue: certification?.targetDate != nil)
+        _targetDate = State(initialValue: certification?.targetDate ?? Date())
         _status = State(initialValue: certification?.status ?? "planned")
-        _hasExpiry = State(initialValue: certification?.expiresOn != nil); _expiresOn = State(initialValue: certification?.expiresOn ?? Date())
-        _linkedTaskID = State(initialValue: certification?.linkedTaskID); _notes = State(initialValue: certification?.notes ?? "")
+        _hasExpiry = State(initialValue: certification?.expiresOn != nil)
+        _expiresOn = State(initialValue: certification?.expiresOn ?? Date())
+        _linkedTaskID = State(initialValue: certification?.linkedTaskID)
+        _notes = State(initialValue: certification?.notes ?? "")
     }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var body: some View {
-        NavigationStack { Form {
-            SwiftUI.Section("Certification") { TextField("Name", text: $name); Picker("Status", selection: $status) { ForEach(["planned", "studying", "scheduled", "passed", "lapsed"], id: \.self) { Text($0.capitalized).tag($0) } } }
-            SwiftUI.Section("Dates") { Toggle("Exam date", isOn: $hasTargetDate); if hasTargetDate { DatePicker("Target", selection: $targetDate, displayedComponents: .date) }; Toggle("Expiration date", isOn: $hasExpiry); if hasExpiry { DatePicker("Expires", selection: $expiresOn, displayedComponents: .date) } }
-            SwiftUI.Section("Routine study") { Picker("Linked task", selection: $linkedTaskID) { Text("None").tag(UUID?.none); ForEach(tasks.filter { $0.domain == .certifications && !$0.isArchived && !$0.isSubstep }) { Text($0.title).tag(Optional($0.id)) } } }
-            SwiftUI.Section("Notes") { TextField("Notes", text: $notes, axis: .vertical).lineLimit(3...6) }
-        }.trainingLogForm().navigationTitle(certification == nil ? "Add Certification" : "Edit Certification").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) } }.alert("Unable to Save", isPresented: $saveError) { Button("OK", role: .cancel) {} } message: { Text("The certification could not be saved. Try again.") } }.trainingLogNavigation()
+        NavigationStack {
+            Form {
+                SwiftUI.Section("Certification") {
+                    TextField("Name", text: $name)
+                    Picker("Status", selection: $status) {
+                        ForEach(["planned", "studying", "scheduled", "passed", "lapsed"], id: \.self) {
+                            Text($0.capitalized).tag($0)
+                        }
+                    }
+                }
+
+                SwiftUI.Section("Dates") {
+                    Toggle("Exam date", isOn: $hasTargetDate)
+                    if hasTargetDate {
+                        DatePicker("Target", selection: $targetDate, displayedComponents: .date)
+                    }
+                    Toggle("Expiration date", isOn: $hasExpiry)
+                    if hasExpiry {
+                        DatePicker("Expires", selection: $expiresOn, displayedComponents: .date)
+                    }
+                }
+
+                SwiftUI.Section("Routine study") {
+                    Picker("Linked task", selection: $linkedTaskID) {
+                        Text("None").tag(UUID?.none)
+                        ForEach(tasks.filter {
+                            $0.domain == .certifications && !$0.isArchived && !$0.isSubstep
+                        }) {
+                            Text($0.title).tag(Optional($0.id))
+                        }
+                    }
+                }
+
+                SwiftUI.Section("Notes") {
+                    TextField("Notes", text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+            }
+            .trainingLogForm()
+            .navigationTitle(certification == nil ? "Add Certification" : "Edit Certification")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", action: save)
+                        .disabled(trimmedName.isEmpty)
+                }
+            }
+            .alert("Unable to Save", isPresented: $saveError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("The certification could not be saved. Try again.")
+            }
+        }
+        .trainingLogNavigation()
     }
-    private func save() { let value = certification ?? Certification(name: name.trimmingCharacters(in: .whitespacesAndNewlines)); value.name = name.trimmingCharacters(in: .whitespacesAndNewlines); value.targetDate = hasTargetDate ? targetDate : nil; value.status = status; value.expiresOn = hasExpiry ? expiresOn : nil; value.linkedTaskID = linkedTaskID; value.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines); if onSaved(value) { dismiss() } else { saveError = true } }
+
+    private func save() {
+        let value = certification ?? Certification(name: trimmedName)
+        value.name = trimmedName
+        value.targetDate = hasTargetDate ? targetDate : nil
+        value.status = status
+        value.expiresOn = hasExpiry ? expiresOn : nil
+        value.linkedTaskID = linkedTaskID
+
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        value.notes = trimmedNotes.isEmpty ? nil : trimmedNotes
+
+        if onSaved(value) {
+            dismiss()
+        } else {
+            saveError = true
+        }
+    }
 }

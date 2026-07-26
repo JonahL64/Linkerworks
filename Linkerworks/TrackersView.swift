@@ -40,9 +40,19 @@ struct TrackersView: View {
                                 DomainTrackerView(domain: domain)
                             }
                         } label: {
-                            Label(domain.displayName, systemImage: domain.symbolName)
-                                .foregroundStyle(TrainingLogTheme.primaryText)
-                                .trainingLogRow()
+                            HStack(spacing: LWSpace.sm) {
+                                LWDomainBadge(domain: domain)
+
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(domain.displayName)
+                                        .font(LWFont.bodyMedium)
+                                        .foregroundStyle(LWColor.ink)
+                                    Text(domain.blurb)
+                                        .font(LWFont.caption)
+                                        .foregroundStyle(LWColor.inkSecondary)
+                                }
+                            }
+                            .trainingLogRow()
                         }
                     }
                 } header: {
@@ -64,14 +74,25 @@ private struct LogDestinationRow: View {
     let symbol: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Label(title, systemImage: symbol)
-                .font(.body.weight(.semibold))
-            Text(detail)
-                .font(.subheadline)
-                .foregroundStyle(TrainingLogTheme.secondaryText)
+        HStack(spacing: LWSpace.sm) {
+            ZStack {
+                RoundedRectangle(cornerRadius: LWRadius.md)
+                    .fill(LWColor.accentMuted)
+                Image(systemName: symbol)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(LWColor.accent)
+            }
+            .frame(width: 38, height: 38)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(LWFont.bodyStrong)
+                    .foregroundStyle(LWColor.ink)
+                Text(detail)
+                    .font(LWFont.caption)
+                    .foregroundStyle(LWColor.inkSecondary)
+            }
         }
-        .foregroundStyle(TrainingLogTheme.primaryText)
         .trainingLogRow()
     }
 }
@@ -136,6 +157,17 @@ struct DomainTrackerView: View {
 
     var body: some View {
         List {
+            SwiftUI.Section {
+                domainHeader
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(
+                        top: LWSpace.xs,
+                        leading: 0,
+                        bottom: LWSpace.md,
+                        trailing: 0
+                    ))
+            }
+
             if let leadingContent {
                 leadingContent
             }
@@ -148,52 +180,90 @@ struct DomainTrackerView: View {
             referenceContent
         }
         .trainingLogList()
-        .listRowBackground(TrainingLogTheme.background)
+        .listRowBackground(LWColor.surface)
         .navigationTitle(domain.displayName)
+    }
+
+    /// Domain summary. Carries the domain tint so the screen is identifiable
+    /// rather than being one more generic list.
+    private var domainHeader: some View {
+        HStack(spacing: LWSpace.md) {
+            LWDomainBadge(domain: domain, size: 44)
+
+            HStack(spacing: LWSpace.lg) {
+                headerStat("Completions", value: domainCompletions.count)
+                headerStat("Skipped", value: domainSkips.count)
+                headerStat("Tasks", value: domainTasks.count)
+            }
+        }
+        .lwBlock(padding: LWSpace.md, radius: LWRadius.lg)
+    }
+
+    private func headerStat(_ label: String, value: Int) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(value.formatted())
+                .font(LWFont.displaySmall)
+                .monospacedDigit()
+                .foregroundStyle(LWColor.ink)
+            Text(label)
+                .font(LWFont.caption)
+                .foregroundStyle(LWColor.inkSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
     private var completionHistory: some View {
-        SwiftUI.Section("Completion History") {
-            LabeledContent("Task items", value: "\(domainTasks.count)")
-            LabeledContent("Recorded completions", value: "\(domainCompletions.count)")
-            LabeledContent("Skipped", value: "\(domainSkips.count)")
-
+        SwiftUI.Section("Recent activity") {
             if domainRecords.isEmpty {
                 Text("No completions or skips recorded yet.")
                     .foregroundStyle(TrainingLogTheme.secondaryText)
             } else {
                 ForEach(domainRecords) { record in
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 6) {
+                    HStack(alignment: .top, spacing: LWSpace.sm) {
+                        Circle()
+                            .fill(record.state == .skipped ? LWColor.neutral : domain.tint)
+                            .frame(width: 6, height: 6)
+                            .padding(.top, 6)
+
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(taskByID[record.taskId]?.title ?? "Archived task")
-                            if record.state == .skipped {
-                                Text("Skipped")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(TrainingLogTheme.secondaryText)
-                            }
+                                .font(LWFont.callout)
+                                .foregroundStyle(LWColor.ink)
+                            Text(record.completedAt, format: .dateTime.weekday(.abbreviated).month().day().year().hour().minute())
+                                .font(LWFont.monoSmall)
+                                .monospacedDigit()
+                                .foregroundStyle(LWColor.inkSecondary)
                         }
-                        Text(record.completedAt, format: .dateTime.weekday(.abbreviated).month().day().year().hour().minute())
-                            .font(.caption)
-                            .monospacedDigit()
-                            .foregroundStyle(TrainingLogTheme.secondaryText)
+
+                        Spacer(minLength: LWSpace.xs)
+
+                        if record.state == .skipped {
+                            LWChip(text: "Skipped")
+                        }
                     }
+                    .trainingLogRow()
                 }
             }
         }
 
-        SwiftUI.Section("Domain Task Items") {
+        SwiftUI.Section("Tasks in this domain") {
             if taskSummaries.isEmpty {
                 Text("No tasks are assigned to this domain.")
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                    .font(LWFont.callout)
+                    .foregroundStyle(LWColor.inkSecondary)
             } else {
                 ForEach(taskSummaries) { task in
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(task.title)
+                            .font(LWFont.callout)
+                            .foregroundStyle(LWColor.ink)
                         Text(task.scheduleDescription)
-                            .font(.caption)
-                            .foregroundStyle(TrainingLogTheme.secondaryText)
+                            .font(LWFont.caption)
+                            .foregroundStyle(LWColor.inkSecondary)
                     }
+                    .trainingLogRow()
                 }
             }
         }
@@ -201,15 +271,19 @@ struct DomainTrackerView: View {
 
     @ViewBuilder
     private var macroTargets: some View {
-        SwiftUI.Section("Daily Macro Targets") {
+        SwiftUI.Section("Daily macro targets") {
             ForEach(daySchedules) { schedule in
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: LWSpace.xxs) {
                     Text(schedule.weekdayName)
-                        .font(.headline)
+                        .font(LWFont.calloutMedium)
+                        .foregroundStyle(LWColor.ink)
                     Text("\(schedule.targetCalories) kcal · Protein \(schedule.targetProteinGrams) g · Fat \(schedule.targetFatGrams) g")
                     Text("Carbohydrates \(schedule.targetCarbohydrateGrams) g · Fiber \(schedule.targetFiberGrams) g")
                 }
-                .font(.subheadline)
+                .font(LWFont.caption)
+                .monospacedDigit()
+                .foregroundStyle(LWColor.inkSecondary)
+                .trainingLogRow()
             }
         }
     }
@@ -299,11 +373,9 @@ private struct ReferenceNoteRow: View {
 
     var body: some View {
         Text(text)
-            .font(isTitle ? .headline : (isSectionLabel ? .subheadline.weight(.semibold) : .body))
+            .font(isTitle ? LWFont.titleSmall : (isSectionLabel ? LWFont.heading : LWFont.callout))
             .foregroundStyle(
-                isTitle || isSectionLabel
-                    ? TrainingLogTheme.primaryText
-                    : TrainingLogTheme.secondaryText
+                isTitle || isSectionLabel ? LWColor.ink : LWColor.inkSecondary
             )
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -318,12 +390,8 @@ private struct ReferenceGridRow: View {
             HStack(alignment: .top, spacing: 12) {
                 ForEach(cells.indices, id: \.self) { index in
                     Text(cells[index].displayText)
-                        .font(isHeader ? .caption.weight(.semibold) : .caption)
-                        .foregroundStyle(
-                            isHeader
-                                ? TrainingLogTheme.secondaryText
-                                : TrainingLogTheme.primaryText
-                        )
+                        .font(isHeader ? LWFont.captionMedium : LWFont.caption)
+                        .foregroundStyle(isHeader ? LWColor.inkSecondary : LWColor.ink)
                         .frame(width: 132, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }

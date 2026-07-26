@@ -15,7 +15,7 @@ struct SettingsView: View {
         List {
             SwiftUI.Section("Routine day phases") {
                 Text("These are personal cues, not due times. Routine tasks never become overdue.")
-                    .font(.footnote)
+                    .font(LWFont.caption)
                     .foregroundStyle(TrainingLogTheme.secondaryText)
 
                 ForEach(RoutineDayPhase.allCases) { phase in
@@ -35,13 +35,14 @@ struct SettingsView: View {
                 }
 
                 Button("Save routine phases") { saveRoutinePhases() }
-                    .foregroundStyle(TrainingLogTheme.completionAccent)
+                    .font(LWFont.calloutMedium)
+                    .foregroundStyle(LWColor.accent)
             }
 
             SwiftUI.Section("Homework") {
                 Toggle("Show homework", isOn: $homeworkIntegrationEnabled)
                 Text("Turn this off during breaks or after graduation. Your courses and assignments stay saved, but homework is hidden from Today and Plan.")
-                    .font(.footnote)
+                    .font(LWFont.caption)
                     .foregroundStyle(TrainingLogTheme.secondaryText)
             }
         }
