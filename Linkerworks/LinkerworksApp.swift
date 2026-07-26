@@ -1,27 +1,41 @@
-//
-//  LinkerworksApp.swift
-//  Linkerworks
-//
-//  Created by Jonah Linker on 7/21/26.
-//
-
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct LinkerworksApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    private let sharedModelContainer: ModelContainer
 
+    init() {
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try SharedModelContainer.make()
+            let report = try SeedImporter.importIfNeeded(into: container.mainContext)
+            let defaults = UserDefaults(suiteName: SharedModelContainer.appGroupIdentifier) ?? .standard
+            _ = try DaySnapshotService.backfillIfNeeded(
+                in: container.mainContext,
+                defaults: defaults
+            )
+            sharedModelContainer = container
+
+#if DEBUG
+            let storeURL = try SharedModelContainer.storeURL()
+            print("SwiftData store: \(storeURL.path)")
+            if report.didImport {
+                print(
+                    "Seed import complete: \(report.topLevelTaskCount) tasks, "
+                    + "\(report.substepCount) nested sub-steps, "
+                    + "\(report.referenceCount) reference tables"
+                )
+                for day in report.taskCountsByDay.keys.sorted() {
+                    print("\(day): \(report.taskCountsByDay[day, default: 0]) tasks")
+                }
+            } else {
+                print("Seed import skipped: version \(SeedImporter.importVersion) already imported")
+            }
+#endif
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            fatalError("Unable to initialize Linkerworks data: \(error.localizedDescription)")
         }
-    }()
+    }
 
     var body: some Scene {
         WindowGroup {

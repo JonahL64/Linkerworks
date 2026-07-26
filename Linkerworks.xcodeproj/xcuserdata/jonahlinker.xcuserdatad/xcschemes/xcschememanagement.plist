@@ -7,7 +7,25 @@
 		<key>Linkerworks.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+		<key>LinkerworksWidgetExtension.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>3EF7C8F330100683003F0263</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>3EF7C907301006BF003F0263</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

@@ -1,0 +1,279 @@
+import Foundation
+import SwiftData
+
+enum Domain: String, Codable, CaseIterable, Identifiable, Sendable {
+    case sleep
+    case eating
+    case goalkeeping
+    case lifting
+    case posture
+    case grooming
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .sleep: "Sleep"
+        case .eating: "Eating"
+        case .goalkeeping: "Goalkeeping"
+        case .lifting: "Lifting"
+        case .posture: "Posture"
+        case .grooming: "Grooming"
+        }
+    }
+
+    static func inferred(for title: String, sectionName: String = "") -> Domain {
+        let source = "\(title) \(sectionName)".lowercased()
+
+        if source.contains("sleep") || source.contains("bed") { return .sleep }
+        if source.contains("eat") || source.contains("meal") || source.contains("food") || source.contains("macro") { return .eating }
+        if source.contains("goalkeep") || source.contains("goalie") || source.contains("save") { return .goalkeeping }
+        if source.contains("lift") || source.contains("workout") || source.contains("exercise") || source.contains("run") || source.contains("gym") { return .lifting }
+        if source.contains("posture") || source.contains("stretch") || source.contains("mobility") { return .posture }
+        if source.contains("groom") || source.contains("shav") || source.contains("brush") || source.contains("skin") { return .grooming }
+        return .sleep
+    }
+}
+
+enum TaskCompletion {
+    /// A parent with active children is driven by those children once any child
+    /// has a record for the day. Older parent-only records remain compatible.
+    static func isComplete(_ task: TaskItem, completedTaskIDs: Set<UUID>) -> Bool {
+        let activeChildren = task.children.filter { !$0.isArchived }
+        guard !activeChildren.isEmpty else {
+            return completedTaskIDs.contains(task.id)
+        }
+
+        if activeChildren.contains(where: { completedTaskIDs.contains($0.id) }) {
+            return activeChildren.allSatisfy { completedTaskIDs.contains($0.id) }
+        }
+        return completedTaskIDs.contains(task.id)
+    }
+}
+
+struct ProgressDayCompletion: Equatable {
+    let scheduledCount: Int
+    let completedCount: Int
+
+    var percentage: Double {
+        guard scheduledCount > 0 else { return 0 }
+        return Double(completedCount) / Double(scheduledCount)
+    }
+
+    var isComplete: Bool {
+        scheduledCount > 0 && completedCount == scheduledCount
+    }
+}
+
+/// Pure historical calculation used by Progress and focused regression tests.
+/// A skipped top-level task is removed from the day. For a lifted parent,
+/// skipped children are removed from its captured completion unit; when every
+/// child is skipped, the parent is removed too.
+enum HistoricalDayProgress {
+    static func completion(
+        scheduledTaskIDs: [UUID],
+        childTaskIDsByParent: [UUID: [UUID]],
+        records: [CompletionRecord]
+    ) -> ProgressDayCompletion {
+        let states = stateByTaskID(records)
+        var scheduledCount = 0
+        var completedCount = 0
+
+        for taskID in scheduledTaskIDs {
+            if states[taskID] == .skipped {
+                continue
+            }
+
+            let childIDs = childTaskIDsByParent[taskID] ?? []
+            guard !childIDs.isEmpty else {
+                scheduledCount += 1
+                if states[taskID] == .complete {
+                    completedCount += 1
+                }
+                continue
+            }
+
+            let childStates = childIDs.compactMap { states[$0] }
+            if childStates.isEmpty {
+                // Parent-only completions predate the substep interaction.
+                scheduledCount += 1
+                if states[taskID] == .complete {
+                    completedCount += 1
+                }
+                continue
+            }
+
+            let activeChildIDs = childIDs.filter { states[$0] != .skipped }
+            guard !activeChildIDs.isEmpty else {
+                continue
+            }
+
+            scheduledCount += 1
+            if activeChildIDs.allSatisfy({ states[$0] == .complete }) {
+                completedCount += 1
+            }
+        }
+
+        return ProgressDayCompletion(
+            scheduledCount: scheduledCount,
+            completedCount: completedCount
+        )
+    }
+
+    static func stateByTaskID(_ records: [CompletionRecord]) -> [UUID: CompletionRecordState] {
+        records
+            .sorted {
+                $0.completedAt == $1.completedAt
+                    ? $0.id.uuidString < $1.id.uuidString
+                    : $0.completedAt < $1.completedAt
+            }
+            .reduce(into: [:]) { states, record in
+                states[record.taskId] = record.state
+            }
+    }
+}
+
+struct HistoricalProgressSnapshot {
+    let scheduledTaskIDs: [UUID]
+    let childTaskIDsByParent: [UUID: [UUID]]
+
+    init(snapshot: DaySnapshot) {
+        scheduledTaskIDs = snapshot.scheduledTaskIDs
+        childTaskIDsByParent = Dictionary(grouping: snapshot.completionUnits, by: \.parentTaskID)
+            .mapValues { units in units.last?.childTaskIDs ?? [] }
+    }
+
+    init(tasks: [TaskItem], date: Date, calendar: Calendar) {
+        let scheduledTasks = DaySnapshotService.scheduledTopLevelTasks(
+            from: tasks,
+            on: date,
+            calendar: calendar
+        )
+        scheduledTaskIDs = scheduledTasks.map(\.id)
+        childTaskIDsByParent = DaySnapshotService.childTaskIDsByParent(for: scheduledTasks)
+    }
+}
+
+enum DaySnapshotService {
+    static let backfillMarkerKey = "historicalProgressSnapshotBackfillVersion"
+    static let backfillVersion = 1
+
+    static func dayKey(for date: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 0,
+            components.month ?? 0,
+            components.day ?? 0
+        )
+    }
+
+    static func date(for dayKey: String, calendar: Calendar = .current) -> Date? {
+        let parts = dayKey.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else {
+            return nil
+        }
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))
+    }
+
+    @discardableResult
+    static func captureIfNeeded(
+        for date: Date,
+        in modelContext: ModelContext,
+        calendar: Calendar = .current,
+        capturedAt: Date = Date()
+    ) throws -> DaySnapshot {
+        let key = dayKey(for: date, calendar: calendar)
+        if let existing = try modelContext.fetch(FetchDescriptor<DaySnapshot>())
+            .first(where: { $0.dayKey == key }) {
+            return existing
+        }
+
+        let tasks = try modelContext.fetch(FetchDescriptor<TaskItem>())
+        let scheduledTasks = scheduledTopLevelTasks(from: tasks, on: date, calendar: calendar)
+        let snapshot = DaySnapshot(
+            dayKey: key,
+            scheduledTaskIDs: scheduledTasks.map(\.id),
+            capturedAt: capturedAt
+        )
+        let units = childTaskIDsByParent(for: scheduledTasks).map {
+            DaySnapshotCompletionUnit(parentTaskID: $0.key, childTaskIDs: $0.value, daySnapshot: snapshot)
+        }
+        snapshot.completionUnits = units
+        modelContext.insert(snapshot)
+        units.forEach(modelContext.insert)
+        return snapshot
+    }
+
+    /// Backfill only the dates with legacy records. The marker is written only
+    /// after SwiftData saves, and unique day keys make retries harmless.
+    @discardableResult
+    static func backfillIfNeeded(
+        in modelContext: ModelContext,
+        defaults: UserDefaults,
+        calendar: Calendar = .current
+    ) throws -> Bool {
+        guard defaults.integer(forKey: backfillMarkerKey) < backfillVersion else {
+            return false
+        }
+
+        let records = try modelContext.fetch(FetchDescriptor<CompletionRecord>())
+        let existingSnapshotKeys = Set(
+            try modelContext.fetch(FetchDescriptor<DaySnapshot>()).map(\.dayKey)
+        )
+        let tasks = try modelContext.fetch(FetchDescriptor<TaskItem>())
+        let keysAndDates = Dictionary(grouping: records) {
+            dayKey(for: $0.date, calendar: calendar)
+        }
+        for (key, recordsOnDay) in keysAndDates where !existingSnapshotKeys.contains(key) {
+            guard let date = recordsOnDay.first?.date else { continue }
+            let scheduledTasks = scheduledTopLevelTasks(from: tasks, on: date, calendar: calendar)
+            let snapshot = DaySnapshot(
+                dayKey: key,
+                scheduledTaskIDs: scheduledTasks.map(\.id)
+            )
+            let units = childTaskIDsByParent(for: scheduledTasks).map {
+                DaySnapshotCompletionUnit(
+                    parentTaskID: $0.key,
+                    childTaskIDs: $0.value,
+                    daySnapshot: snapshot
+                )
+            }
+            snapshot.completionUnits = units
+            modelContext.insert(snapshot)
+            units.forEach(modelContext.insert)
+        }
+        try modelContext.save()
+        defaults.set(backfillVersion, forKey: backfillMarkerKey)
+        return true
+    }
+
+    static func scheduledTopLevelTasks(
+        from tasks: [TaskItem],
+        on date: Date,
+        calendar: Calendar
+    ) -> [TaskItem] {
+        let weekdayNames = [
+            "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+        ]
+        let index = calendar.component(.weekday, from: date) - 1
+        guard weekdayNames.indices.contains(index) else { return [] }
+        let weekday = weekdayNames[index]
+        return tasks.filter {
+            !$0.isArchived
+                && !$0.isSubstep
+                && $0.parent == nil
+                && $0.daysOfWeek.contains(weekday)
+        }
+    }
+
+    static func childTaskIDsByParent(for tasks: [TaskItem]) -> [UUID: [UUID]] {
+        Dictionary(uniqueKeysWithValues: tasks.compactMap { task in
+            let childIDs = task.children.filter { !$0.isArchived }.map(\.id)
+            return childIDs.isEmpty ? nil : (task.id, childIDs)
+        })
+    }
+}

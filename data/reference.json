@@ -1,0 +1,821 @@
+{
+  "Sleep": [
+    [
+      "SLEEP",
+      null
+    ],
+    [
+      "The highest-return item in this workbook",
+      null
+    ],
+    [
+      "Metric",
+      "Target"
+    ],
+    [
+      "Time in bed",
+      "9 hours per night (the original sheet said 'per week' - assuming typo)"
+    ],
+    [
+      "Lights out / wake",
+      "22:00 / 07:00, seven days a week including weekends"
+    ],
+    [
+      "Non-negotiable",
+      "Consistent wake time. Consistency beats duration if you have to pick one."
+    ],
+    [
+      "Why it is first",
+      "Sleep debt blunts training adaptation, appetite regulation, and skin recovery simultaneously - it undercuts every other tab."
+    ]
+  ],
+  "Eating": [
+    [
+      "EATING",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "Phase 1: 160 -> 175 lbs. Surplus is the mechanism; consistency is the constraint.",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "Macro",
+      "Grams/day",
+      "Calories",
+      "% kcal",
+      "Notes"
+    ],
+    [
+      "Protein",
+      150,
+      600,
+      0.149812734082397,
+      "~0.94 g/lb at 160 lbs. No reason to go higher."
+    ],
+    [
+      "Fat",
+      145,
+      1305,
+      0.325842696629214,
+      "Do not cut this to make room for carbs - it is hormone and calorie insurance."
+    ],
+    [
+      "Carbs",
+      525,
+      2100,
+      0.52434456928839,
+      "The lever. Add carbs first when the scale stalls."
+    ],
+    [
+      "Fiber",
+      40,
+      null,
+      null,
+      "Floor, not a target. At 4,000 kcal this is easy to miss."
+    ],
+    [
+      "TOTAL",
+      null,
+      4005,
+      1,
+      "Grams are the inputs (blue-editable); calories and % recalculate."
+    ],
+    [
+      "MEAL SPLIT",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "Meal",
+      "kcal",
+      "P",
+      "F",
+      "C"
+    ],
+    [
+      "Breakfast (08:00)",
+      900,
+      40,
+      35,
+      110
+    ],
+    [
+      "Mid-morning (10:30)",
+      450,
+      15,
+      20,
+      50
+    ],
+    [
+      "Lunch (12:30)",
+      1000,
+      35,
+      35,
+      130
+    ],
+    [
+      "Post-training (19:00)",
+      650,
+      40,
+      25,
+      85
+    ],
+    [
+      "Dinner (20:00)",
+      1000,
+      20,
+      30,
+      150
+    ],
+    [
+      "TOTAL",
+      4000,
+      150,
+      145,
+      525
+    ],
+    [
+      "PHASES",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "Phase",
+      "Window",
+      "Target",
+      null,
+      null
+    ],
+    [
+      "Phase 1",
+      "now -> ~10 weeks",
+      "160 -> 175 lbs",
+      null,
+      null
+    ],
+    [
+      "Hold",
+      "2 weeks",
+      "Let the scale settle, let appetite reset",
+      null,
+      null
+    ],
+    [
+      "Phase 2",
+      "6 months",
+      "175 -> 190 lbs",
+      null,
+      null
+    ],
+    [
+      "Phase 3",
+      "year 2+",
+      "190 -> 200-250 kcal/day above maintenance, grinding",
+      null,
+      null
+    ],
+    [
+      "NOTE - GOALKEEPING ADDS COST",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "An hour of goalkeeping every day is roughly 300-500 kcal you were not previously spending. If the scale stops moving for two consecutive Monday weigh-ins, add ~300 kcal (75g carbs) rather than cutting the GK session.",
+      null,
+      null,
+      null,
+      null
+    ]
+  ],
+  "Goalkeeping": [
+    [
+      "GOALKEEPING",
+      null,
+      null
+    ],
+    [
+      "1 hour daily. Warm-up 10 / technical 20 / main 25 / cool-down 5.",
+      null,
+      null
+    ],
+    [
+      "Day",
+      "Focus",
+      "Main block"
+    ],
+    [
+      "Saturday",
+      "Handling & high balls",
+      "Lofted serves to catch at full extension, back-pedal and set, claim through contact. 4 x 8 reps with a full reset between."
+    ],
+    [
+      "Sunday",
+      "Technical only - no dives",
+      "Footwork ladder, set position under a moving ball, W-catch repetition, low blocks from the knees. Deliberately unloaded."
+    ],
+    [
+      "Monday",
+      "Shot-stopping, low dives",
+      "Low and mid-height shots from 12-16 yards. Collapse dive mechanics: lead hand first, no rolling onto the shoulder."
+    ],
+    [
+      "Tuesday",
+      "Distribution",
+      "Throws (roll, javelin, overarm) to targets at 20/30/40 yards. Goal kicks both feet. Driven ball under a 3-second clock."
+    ],
+    [
+      "Wednesday",
+      "Reaction & reflexes",
+      "Deflected and screened shots, close-range rebound work, double-save sequences. Short reps, long rests."
+    ],
+    [
+      "Thursday",
+      "Crosses & aerial claims",
+      "Near-post and far-post service, punch vs. catch decisions, starting position off the line. Call it every time."
+    ],
+    [
+      "Friday",
+      "1v1s, spreading, angles",
+      "Onrushing attacker from three angles. Spread late, stay big, hands low. Recovery saves after a first touch beats you."
+    ],
+    [
+      "STANDING RULES",
+      null,
+      null
+    ],
+    [
+      "- Never dive cold. The 10-minute warm-up is not optional and it is where most keeper injuries are avoided.",
+      null,
+      null
+    ],
+    [
+      "- Sunday is technical only. Seven hard days a week is how you arrive at Phase 2 injured instead of 15 lbs heavier.",
+      null,
+      null
+    ],
+    [
+      "- Goalkeeping goes BEFORE the lift, not after. Skill work on fatigued legs teaches bad mechanics.",
+      null,
+      null
+    ],
+    [
+      "- If a session has to be cut, cut the main block and keep the technical block. Reps of the fundamentals compound.",
+      null,
+      null
+    ],
+    [
+      "- Fingers, wrists and hips get the cool-down. They take the load nobody budgets for.",
+      null,
+      null
+    ]
+  ],
+  "Working Out": [
+    [
+      "WORKING OUT",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "Mon Upper A / Tue Lower A / Thu Upper B / Fri Lower B. Rowing Wed and Sat.",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "Day",
+      "Exercise",
+      "Sets x reps",
+      "RIR",
+      "Notes"
+    ],
+    [
+      "Monday - UPPER A",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "Incline DB press",
+      "4 x 6-8",
+      "2-3",
+      null
+    ],
+    [
+      null,
+      "Weighted pull-up / pulldown",
+      "4 x 6-10",
+      "2",
+      null
+    ],
+    [
+      null,
+      "Seated DB shoulder press",
+      "3 x 8-10",
+      "2",
+      null
+    ],
+    [
+      null,
+      "Chest-supported row",
+      "3 x 10-12",
+      "1-2",
+      null
+    ],
+    [
+      null,
+      "Cable fly",
+      "3 x 12-15",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Cable lateral raise",
+      "4 x 12-20",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Incline DB curl",
+      "3 x 10-12",
+      "1",
+      null
+    ],
+    [
+      "Tuesday - LOWER A",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "Back squat",
+      "4 x 5-8",
+      "2-3",
+      null
+    ],
+    [
+      null,
+      "Romanian deadlift",
+      "3 x 8-10",
+      "2",
+      null
+    ],
+    [
+      null,
+      "Leg press",
+      "3 x 10-12",
+      "1-2",
+      null
+    ],
+    [
+      null,
+      "Seated leg curl",
+      "3 x 10-12",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Standing calf raise",
+      "4 x 10-15",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Lateral raise",
+      "3 x 15-20",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Cable crunch",
+      "3 x 12-15",
+      "1",
+      null
+    ],
+    [
+      "Thursday - UPPER B",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "Flat barbell bench",
+      "4 x 6-8",
+      "2-3",
+      null
+    ],
+    [
+      null,
+      "Seal row / chest-supported row",
+      "4 x 8-10",
+      "2",
+      null
+    ],
+    [
+      null,
+      "Wide-grip lat pulldown",
+      "3 x 10-12",
+      "1-2",
+      null
+    ],
+    [
+      null,
+      "Dip or machine press",
+      "3 x 8-12",
+      "1-2",
+      null
+    ],
+    [
+      null,
+      "Cable lateral raise",
+      "4 x 12-20",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Rear delt flye",
+      "4 x 15-20",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Rope pushdown",
+      "3 x 12-15",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Hammer curl",
+      "3 x 10-12",
+      "1",
+      null
+    ],
+    [
+      "Friday - LOWER B",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      "Hack squat / front squat",
+      "3 x 8-10",
+      "2",
+      null
+    ],
+    [
+      null,
+      "Hip thrust",
+      "3 x 8-10",
+      "2",
+      null
+    ],
+    [
+      null,
+      "Bulgarian split squat",
+      "3 x 8-10",
+      "2",
+      null
+    ],
+    [
+      null,
+      "Lying leg curl",
+      "3 x 12-15",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Seated calf raise",
+      "4 x 12-20",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Lateral raise",
+      "3 x 15-20",
+      "1",
+      null
+    ],
+    [
+      null,
+      "Hanging leg raise",
+      "3 x 10-15",
+      "1",
+      null
+    ],
+    [
+      "RIR = reps in reserve. In the original file these were stored as dates - Excel converted '2-3' to 3 Feb 2026 and '1-2' to 2 Jan 2026. Fixed here as text.",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "PROGRESSION",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "+5 lbs upper body, +10 lbs lower body once you hit the top of the rep range at the target RIR. If you miss two sessions in a row on a lift, deload it 10% and build back.",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "ROWING",
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      "Wednesday and Saturday. 20-25 min, Zone 2, conversational pace. If you cannot talk through it, you are going too hard - this is recovery and aerobic base, not a workout.",
+      null,
+      null,
+      null,
+      null
+    ]
+  ],
+  "Posture": [
+    [
+      "POSTURE"
+    ],
+    [
+      "Anchor to a cue, not a clock."
+    ],
+    [
+      "CUE 1 - AMPLITUDE, NOT TEMPO"
+    ],
+    [
+      "The operative variable is amplitude of upper-body motion, not walking speed. Arms swinging from the shoulder rather than pinned to the ribs; torso permitted to rotate rather than held rigid; feet tracking slightly apart rather than on a single line."
+    ],
+    [
+      "Evidence: Johnson & Tassinary (PNAS, 2007), five studies, 700+ raters - shoulder swagger more than doubled attractiveness ratings for perceived men. A 2025 Scientific Reports 3D motion-capture study (52 walkers, 137 observers) converged on lateral torso oscillation and shoulder abduction as the predictors of perceived dominance. The pace literature is genuinely unresolved - the Chile/Germany/Russia replay study found the extremes rated highest, not the middle."
+    ],
+    [
+      "CUE 2 - HEAD AND CHEST"
+    ],
+    [
+      "Open posture as a default, not as a pre-interview trick in a bathroom stall."
+    ],
+    [
+      "Evidence: the hormonal power-posing claims did not replicate (Ranehill et al., N=200; Carney herself disavowed the effect in 2016). What DID replicate is the self-reported feeling of power - meta-analyses across 40 and 117 studies find g = 0.35-0.40 on affective and self-directed outcomes. That felt-state effect is the mechanism you actually want, because it is what turns a posture you perform into a posture you have."
+    ],
+    [
+      "CUE 3 - HANDS OUT OF POCKETS"
+    ],
+    [
+      "Every doorway. That is the trigger. Not a time of day, not a reminder app - doorways."
+    ],
+    [
+      "TRACK A - STRUCTURAL (2x/week, ~15 min, 8 weeks) - scheduled Monday & Thursday"
+    ],
+    [
+      "Thoracic extension over a foam roller - 2x10, upper back only"
+    ],
+    [
+      "Wall slides - 3x10, low back and forearms in contact"
+    ],
+    [
+      "Chin tucks - 3x10, 5-second holds (deep neck flexors; the group nobody trains)"
+    ],
+    [
+      "Doorway pec stretch - 2x30s each arm at three heights"
+    ],
+    [
+      "Face pulls / band pull-aparts - 3x15"
+    ],
+    [
+      "TRACK B - MOTOR LEARNING"
+    ],
+    [
+      "Anchor to a cue, not a clock - doorways"
+    ],
+    [
+      "Practice static, expect dynamic transfer"
+    ],
+    [
+      "Film yourself - walking, seated, standing in a group. You will not believe it otherwise."
+    ]
+  ],
+  "Brushing": [
+    [
+      "BRUSHING",
+      null
+    ],
+    [
+      "Crest 3D Whitestrips Professional Effects - 20 treatments, 30 min/day",
+      null
+    ],
+    [
+      "Clock",
+      "Action"
+    ],
+    [
+      "Buy",
+      "Sensodyne (potassium nitrate + fluoride) and a soft-bristled toothbrush. Start the Sensodyne a few days BEFORE treatment one."
+    ],
+    [
+      "T-35 min",
+      "Brush gently - soft brush, Sensodyne, 2 min. Floss. Rinse thoroughly; residue kills strip adhesion."
+    ],
+    [
+      "T-35 to T",
+      "Wait. No mouthwash."
+    ],
+    [
+      "T-1 min",
+      "Pat teeth dry with a tissue. Dramatically improves adhesion."
+    ],
+    [
+      "T",
+      "Apply upper strip, then lower. Press along the tooth surface only - off the gumline."
+    ],
+    [
+      "T to T+30",
+      "Work. Sit through it. Do not double up on time or treatments."
+    ],
+    [
+      "T+30",
+      "Remove, rinse with water."
+    ],
+    [
+      "T+30 to +60",
+      "Do not brush."
+    ],
+    [
+      "T+60",
+      "Optional gentle brush; alcohol-free mouthwash if you want one."
+    ]
+  ],
+  "Skincare": [
+    [
+      "SKINCARE",
+      null
+    ],
+    [
+      "Three steps. Anything more is a hobby.",
+      null
+    ],
+    [
+      "When",
+      "Routine"
+    ],
+    [
+      "AM",
+      "Water rinse (or gentle cleanser if oily) -> moisturizer -> broad-spectrum SPF 30+ on face, ears and neck. Two fingers' length is the dose most people underapply."
+    ],
+    [
+      "PM",
+      "Gentle cleanser -> moisturizer. That is all."
+    ],
+    [
+      "Post-lift",
+      "Shower after every session. Watch the chest and back - that is where the acne shows up first on a bulk."
+    ],
+    [
+      "Daily",
+      "SPF lip balm."
+    ]
+  ],
+  "Shaving": [
+    [
+      "SHAVING",
+      null
+    ],
+    [
+      "Shower first, fresh blade, no pressure. That fixes most of it.",
+      null
+    ],
+    [
+      "#",
+      "Step"
+    ],
+    [
+      1,
+      "Shave after the shower, never before."
+    ],
+    [
+      2,
+      "Use actual shave cream, not the foam in a pressurized can."
+    ],
+    [
+      3,
+      "Zero pressure. Let the weight of the razor do it."
+    ],
+    [
+      4,
+      "Short strokes, rinse constantly - two inches at a time, rinse the blade every stroke or two."
+    ],
+    [
+      5,
+      "With the grain first. Re-lather before any second pass."
+    ],
+    [
+      6,
+      "Go slower on the neck and accept less closeness."
+    ],
+    [
+      7,
+      "Cold rinse, pat dry, moisturize."
+    ],
+    [
+      8,
+      "Replace the blade every 5-7 shaves. Most irritation is a dull blade, not technique."
+    ],
+    [
+      null,
+      "What you do not need: safety razors, straight razors, badger brushes, pre-shave oil. Enjoyable hobby, but it will not outperform a sharp cartridge used correctly."
+    ]
+  ],
+  "Small grooming": [
+    [
+      "SMALL GROOMING",
+      null,
+      null
+    ],
+    [
+      "Set it on a calendar. None of this survives on memory.",
+      null,
+      null
+    ],
+    [
+      "Item",
+      "Cadence",
+      "Note"
+    ],
+    [
+      "Haircut",
+      "Every 3-4 weeks",
+      "Book the next one when you leave."
+    ],
+    [
+      "Nails - short, clean, filed",
+      "Every 10-14 days",
+      "Filed, not just clipped."
+    ],
+    [
+      "Trimmer: neckline, ears, nose",
+      "Weekly",
+      "Sunday works - low-effort day."
+    ],
+    [
+      "Eyebrow strays + bridge",
+      "Every 3 weeks",
+      "Trim, do not shape."
+    ],
+    [
+      "SPF lip balm",
+      "Daily",
+      "Already on every day sheet."
+    ]
+  ],
+  "Running": [
+    [
+      "RUNNING"
+    ],
+    [
+      "Deliberately empty - see below."
+    ],
+    [
+      "Running was cut on purpose."
+    ],
+    [
+      "Rowing twice a week plus a daily hour of goalkeeping already puts nine cardio-ish sessions on the calendar. Adding runs on top would work directly against the 4,005 kcal surplus, which is the point of Phase 1. Revisit in Phase 2 if the scale is moving and recovery is fine."
+    ]
+  ]
+}

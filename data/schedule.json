@@ -1,0 +1,1558 @@
+{
+  "Saturday": {
+    "gk_focus": "Handling & high balls",
+    "lift": "Rowing 20-25 min, Zone 2",
+    "target": {
+      "kcal": 4005,
+      "protein_g": 150,
+      "fat_g": 145,
+      "carbs_g": 525,
+      "fiber_g": 40
+    },
+    "sections": [
+      {
+        "name": "AFTER WAKEUP",
+        "tasks": [
+          {
+            "time": "07:00",
+            "task": "Wake - no snooze",
+            "detail": "Same time daily. 9 hours in bed the night before is the target.",
+            "is_substep": false
+          },
+          {
+            "time": "07:05",
+            "task": "Brush",
+            "detail": "Sensodyne (potassium nitrate + fluoride), soft brush, 2 min. Floss. Rinse thoroughly.",
+            "is_substep": false
+          },
+          {
+            "time": "07:15",
+            "task": "Skincare AM",
+            "detail": "Water rinse (gentle cleanser if oily) -> moisturizer -> SPF 30+ on face, ears, neck. Two fingers' length.",
+            "is_substep": false
+          },
+          {
+            "time": "07:20",
+            "task": "SPF lip balm",
+            "detail": "Every day, not just sunny ones.",
+            "is_substep": false
+          },
+          {
+            "time": "07:25",
+            "task": "Wall stand, 2 min",
+            "detail": "Heels, glutes, upper back, head all in contact. This is the reference posture.",
+            "is_substep": false
+          },
+          {
+            "time": "07:30",
+            "task": "Shave (if needed)",
+            "detail": "After the shower, never before. Shave cream not canned foam. Zero pressure, short strokes, with the grain first. Cold rinse, pat dry, moisturize.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "MORNING",
+        "tasks": [
+          {
+            "time": "08:00",
+            "task": "Breakfast - approx. 900 kcal",
+            "detail": "40P / 35F / 110C. Eat it even when not hungry; the surplus is the whole plan.",
+            "is_substep": false
+          },
+          {
+            "time": "08:45",
+            "task": "Whitening strips - 30 min",
+            "detail": "Only during the 20-treatment block. Needs 35+ min since brushing; pat teeth dry first; upper strip then lower, tooth surface only.",
+            "is_substep": false
+          },
+          {
+            "time": "09:15",
+            "task": "Strips out",
+            "detail": "Rinse with water. Do NOT brush for 60 min after.",
+            "is_substep": false
+          },
+          {
+            "time": "10:30",
+            "task": "Mid-morning feed - approx. 450 kcal",
+            "detail": "15P / 20F / 50C. Nuts, whole milk, fruit - dense and fast.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: doorways",
+            "detail": "Every doorway you walk through today: chest open, shoulders back and down, hands out of pockets.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: amplitude",
+            "detail": "Arms swinging from the shoulder, torso allowed to rotate, feet tracking slightly apart. Amplitude, not tempo.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "AFTERNOON",
+        "tasks": [
+          {
+            "time": "12:30",
+            "task": "Lunch - approx. 1,000 kcal",
+            "detail": "35P / 35F / 130C.",
+            "is_substep": false
+          },
+          {
+            "time": "16:00",
+            "task": "GK warm-up",
+            "detail": "10 min - footwork ladder, handling drops, mobility. Never dive cold.",
+            "is_substep": false
+          },
+          {
+            "time": "16:10",
+            "task": "GK technical block",
+            "detail": "20 min - set position, W-catch, collapse dive mechanics. Quality over volume.",
+            "is_substep": false
+          },
+          {
+            "time": "16:30",
+            "task": "GK main block",
+            "detail": "25 min - Handling & high balls. Game-speed reps.",
+            "is_substep": false
+          },
+          {
+            "time": "16:55",
+            "task": "GK cool-down",
+            "detail": "5 min - hip/shoulder mobility, wrists and fingers.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "EVENING",
+        "tasks": [
+          {
+            "time": "17:30",
+            "task": "Rowing - 20-25 min",
+            "detail": "Zone 2, conversational pace. You should be able to talk through it. Not intervals.",
+            "is_substep": false
+          },
+          {
+            "time": "18:00",
+            "task": "Shower",
+            "detail": "Watch the chest and back.",
+            "is_substep": false
+          },
+          {
+            "time": "19:00",
+            "task": "Post-training feed - approx. 650 kcal",
+            "detail": "40P / 25F / 85C. Inside 90 min of finishing.",
+            "is_substep": false
+          },
+          {
+            "time": "20:00",
+            "task": "Dinner - approx. 1,000 kcal",
+            "detail": "20P / 30F / 150C. Check fiber for the day - 40g is the floor.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Daily totals check",
+            "detail": "4,005 kcal | 150P / 145F / 525C / 40g fiber. Under by 300+? Add a shake before bed.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "BEFORE BED",
+        "tasks": [
+          {
+            "time": "21:30",
+            "task": "Screens down",
+            "detail": "Last meal done, last strip long gone.",
+            "is_substep": false
+          },
+          {
+            "time": "21:40",
+            "task": "Brush + floss",
+            "detail": "Skip the mouthwash if you whitened today.",
+            "is_substep": false
+          },
+          {
+            "time": "21:45",
+            "task": "Skincare PM",
+            "detail": "Gentle cleanser -> moisturizer. That is the whole routine.",
+            "is_substep": false
+          },
+          {
+            "time": "21:50",
+            "task": "Small grooming check",
+            "detail": "Nails every 10-14 days | trimmer (neckline, ears, nose) weekly | brows every 3 weeks | haircut every 3-4 weeks.",
+            "is_substep": false
+          },
+          {
+            "time": "22:00",
+            "task": "Lights out",
+            "detail": "9 hours in bed. This is the single highest-leverage item on the sheet.",
+            "is_substep": false
+          }
+        ]
+      }
+    ]
+  },
+  "Sunday": {
+    "gk_focus": "Technical only - footwork, catching, no dives",
+    "lift": "Full rest from lifting",
+    "target": {
+      "kcal": 4005,
+      "protein_g": 150,
+      "fat_g": 145,
+      "carbs_g": 525,
+      "fiber_g": 40
+    },
+    "sections": [
+      {
+        "name": "AFTER WAKEUP",
+        "tasks": [
+          {
+            "time": "07:00",
+            "task": "Wake - no snooze",
+            "detail": "Same time daily. 9 hours in bed the night before is the target.",
+            "is_substep": false
+          },
+          {
+            "time": "07:05",
+            "task": "Brush",
+            "detail": "Sensodyne (potassium nitrate + fluoride), soft brush, 2 min. Floss. Rinse thoroughly.",
+            "is_substep": false
+          },
+          {
+            "time": "07:15",
+            "task": "Skincare AM",
+            "detail": "Water rinse (gentle cleanser if oily) -> moisturizer -> SPF 30+ on face, ears, neck. Two fingers' length.",
+            "is_substep": false
+          },
+          {
+            "time": "07:20",
+            "task": "SPF lip balm",
+            "detail": "Every day, not just sunny ones.",
+            "is_substep": false
+          },
+          {
+            "time": "07:25",
+            "task": "Wall stand, 2 min",
+            "detail": "Heels, glutes, upper back, head all in contact. This is the reference posture.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "MORNING",
+        "tasks": [
+          {
+            "time": "08:00",
+            "task": "Breakfast - approx. 900 kcal",
+            "detail": "40P / 35F / 110C. Eat it even when not hungry; the surplus is the whole plan.",
+            "is_substep": false
+          },
+          {
+            "time": "08:45",
+            "task": "Whitening strips - 30 min",
+            "detail": "Only during the 20-treatment block. Needs 35+ min since brushing; pat teeth dry first; upper strip then lower, tooth surface only.",
+            "is_substep": false
+          },
+          {
+            "time": "09:15",
+            "task": "Strips out",
+            "detail": "Rinse with water. Do NOT brush for 60 min after.",
+            "is_substep": false
+          },
+          {
+            "time": "10:30",
+            "task": "Mid-morning feed - approx. 450 kcal",
+            "detail": "15P / 20F / 50C. Nuts, whole milk, fruit - dense and fast.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: doorways",
+            "detail": "Every doorway you walk through today: chest open, shoulders back and down, hands out of pockets.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: amplitude",
+            "detail": "Arms swinging from the shoulder, torso allowed to rotate, feet tracking slightly apart. Amplitude, not tempo.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "AFTERNOON",
+        "tasks": [
+          {
+            "time": "12:30",
+            "task": "Lunch - approx. 1,000 kcal",
+            "detail": "35P / 35F / 130C.",
+            "is_substep": false
+          },
+          {
+            "time": "16:00",
+            "task": "GK warm-up",
+            "detail": "10 min - footwork ladder, handling drops, mobility. Never dive cold.",
+            "is_substep": false
+          },
+          {
+            "time": "16:10",
+            "task": "GK technical block",
+            "detail": "20 min - set position, W-catch, collapse dive mechanics. Quality over volume.",
+            "is_substep": false
+          },
+          {
+            "time": "16:30",
+            "task": "GK main block",
+            "detail": "25 min - Technical only - footwork, catching, no dives. Game-speed reps.",
+            "is_substep": false
+          },
+          {
+            "time": "16:55",
+            "task": "GK cool-down",
+            "detail": "5 min - hip/shoulder mobility, wrists and fingers.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "EVENING",
+        "tasks": [
+          {
+            "time": "17:30",
+            "task": "Rest - no lifting, no rowing",
+            "detail": "Walk if you want. Recovery is when the surplus turns into tissue.",
+            "is_substep": false
+          },
+          {
+            "time": "19:00",
+            "task": "Post-training feed - approx. 650 kcal",
+            "detail": "40P / 25F / 85C. Inside 90 min of finishing.",
+            "is_substep": false
+          },
+          {
+            "time": "20:00",
+            "task": "Dinner - approx. 1,000 kcal",
+            "detail": "20P / 30F / 150C. Check fiber for the day - 40g is the floor.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Daily totals check",
+            "detail": "4,005 kcal | 150P / 145F / 525C / 40g fiber. Under by 300+? Add a shake before bed.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "BEFORE BED",
+        "tasks": [
+          {
+            "time": "21:30",
+            "task": "Screens down",
+            "detail": "Last meal done, last strip long gone.",
+            "is_substep": false
+          },
+          {
+            "time": "21:40",
+            "task": "Brush + floss",
+            "detail": "Skip the mouthwash if you whitened today.",
+            "is_substep": false
+          },
+          {
+            "time": "21:45",
+            "task": "Skincare PM",
+            "detail": "Gentle cleanser -> moisturizer. That is the whole routine.",
+            "is_substep": false
+          },
+          {
+            "time": "21:50",
+            "task": "Small grooming check",
+            "detail": "Nails every 10-14 days | trimmer (neckline, ears, nose) weekly | brows every 3 weeks | haircut every 3-4 weeks.",
+            "is_substep": false
+          },
+          {
+            "time": "22:00",
+            "task": "Lights out",
+            "detail": "9 hours in bed. This is the single highest-leverage item on the sheet.",
+            "is_substep": false
+          }
+        ]
+      }
+    ]
+  },
+  "Monday": {
+    "gk_focus": "Shot-stopping, low dives",
+    "lift": "Upper A",
+    "target": {
+      "kcal": 4005,
+      "protein_g": 150,
+      "fat_g": 145,
+      "carbs_g": 525,
+      "fiber_g": 40
+    },
+    "sections": [
+      {
+        "name": "AFTER WAKEUP",
+        "tasks": [
+          {
+            "time": "07:00",
+            "task": "Wake - no snooze",
+            "detail": "Same time daily. 9 hours in bed the night before is the target.",
+            "is_substep": false
+          },
+          {
+            "time": "07:05",
+            "task": "Brush",
+            "detail": "Sensodyne (potassium nitrate + fluoride), soft brush, 2 min. Floss. Rinse thoroughly.",
+            "is_substep": false
+          },
+          {
+            "time": "07:15",
+            "task": "Skincare AM",
+            "detail": "Water rinse (gentle cleanser if oily) -> moisturizer -> SPF 30+ on face, ears, neck. Two fingers' length.",
+            "is_substep": false
+          },
+          {
+            "time": "07:20",
+            "task": "SPF lip balm",
+            "detail": "Every day, not just sunny ones.",
+            "is_substep": false
+          },
+          {
+            "time": "07:25",
+            "task": "Wall stand, 2 min",
+            "detail": "Heels, glutes, upper back, head all in contact. This is the reference posture.",
+            "is_substep": false
+          },
+          {
+            "time": "07:30",
+            "task": "Weigh in",
+            "detail": "Fasted, post-bathroom. Log it. Only Monday's number counts.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "MORNING",
+        "tasks": [
+          {
+            "time": "08:00",
+            "task": "Breakfast - approx. 900 kcal",
+            "detail": "40P / 35F / 110C. Eat it even when not hungry; the surplus is the whole plan.",
+            "is_substep": false
+          },
+          {
+            "time": "08:45",
+            "task": "Whitening strips - 30 min",
+            "detail": "Only during the 20-treatment block. Needs 35+ min since brushing; pat teeth dry first; upper strip then lower, tooth surface only.",
+            "is_substep": false
+          },
+          {
+            "time": "09:15",
+            "task": "Strips out",
+            "detail": "Rinse with water. Do NOT brush for 60 min after.",
+            "is_substep": false
+          },
+          {
+            "time": "10:30",
+            "task": "Mid-morning feed - approx. 450 kcal",
+            "detail": "15P / 20F / 50C. Nuts, whole milk, fruit - dense and fast.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: doorways",
+            "detail": "Every doorway you walk through today: chest open, shoulders back and down, hands out of pockets.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: amplitude",
+            "detail": "Arms swinging from the shoulder, torso allowed to rotate, feet tracking slightly apart. Amplitude, not tempo.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "AFTERNOON",
+        "tasks": [
+          {
+            "time": "12:30",
+            "task": "Lunch - approx. 1,000 kcal",
+            "detail": "35P / 35F / 130C.",
+            "is_substep": false
+          },
+          {
+            "time": "15:00",
+            "task": "Posture Track A - 15 min",
+            "detail": "Thoracic extension over roller 2x10 | Wall slides 3x10 | Chin tucks 3x10 (5s holds) | Doorway pec stretch 2x30s at three heights | Face pulls 3x15.",
+            "is_substep": false
+          },
+          {
+            "time": "16:00",
+            "task": "GK warm-up",
+            "detail": "10 min - footwork ladder, handling drops, mobility. Never dive cold.",
+            "is_substep": false
+          },
+          {
+            "time": "16:10",
+            "task": "GK technical block",
+            "detail": "20 min - set position, W-catch, collapse dive mechanics. Quality over volume.",
+            "is_substep": false
+          },
+          {
+            "time": "16:30",
+            "task": "GK main block",
+            "detail": "25 min - Shot-stopping, low dives. Game-speed reps.",
+            "is_substep": false
+          },
+          {
+            "time": "16:55",
+            "task": "GK cool-down",
+            "detail": "5 min - hip/shoulder mobility, wrists and fingers.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "EVENING",
+        "tasks": [
+          {
+            "time": "17:30",
+            "task": "Lift - Upper A",
+            "detail": "Log every set. Progression: +5 lbs upper, +10 lbs lower once the top of the rep range is hit at target RIR.",
+            "is_substep": false
+          },
+          {
+            "time": null,
+            "task": "   Incline DB press",
+            "detail": "4 x 6-8, RIR 2-3",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Weighted pull-up / pulldown",
+            "detail": "4 x 6-10, RIR 2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Seated DB shoulder press",
+            "detail": "3 x 8-10, RIR 2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Chest-supported row",
+            "detail": "3 x 10-12, RIR 1-2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Cable fly",
+            "detail": "3 x 12-15, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Cable lateral raise",
+            "detail": "4 x 12-20, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Incline DB curl",
+            "detail": "3 x 10-12, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": "18:50",
+            "task": "Shower",
+            "detail": "After every lift. Watch the chest and back.",
+            "is_substep": false
+          },
+          {
+            "time": "19:00",
+            "task": "Post-training feed - approx. 650 kcal",
+            "detail": "40P / 25F / 85C. Inside 90 min of finishing.",
+            "is_substep": false
+          },
+          {
+            "time": "20:00",
+            "task": "Dinner - approx. 1,000 kcal",
+            "detail": "20P / 30F / 150C. Check fiber for the day - 40g is the floor.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Daily totals check",
+            "detail": "4,005 kcal | 150P / 145F / 525C / 40g fiber. Under by 300+? Add a shake before bed.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "BEFORE BED",
+        "tasks": [
+          {
+            "time": "21:30",
+            "task": "Screens down",
+            "detail": "Last meal done, last strip long gone.",
+            "is_substep": false
+          },
+          {
+            "time": "21:40",
+            "task": "Brush + floss",
+            "detail": "Skip the mouthwash if you whitened today.",
+            "is_substep": false
+          },
+          {
+            "time": "21:45",
+            "task": "Skincare PM",
+            "detail": "Gentle cleanser -> moisturizer. That is the whole routine.",
+            "is_substep": false
+          },
+          {
+            "time": "21:50",
+            "task": "Small grooming check",
+            "detail": "Nails every 10-14 days | trimmer (neckline, ears, nose) weekly | brows every 3 weeks | haircut every 3-4 weeks.",
+            "is_substep": false
+          },
+          {
+            "time": "22:00",
+            "task": "Lights out",
+            "detail": "9 hours in bed. This is the single highest-leverage item on the sheet.",
+            "is_substep": false
+          }
+        ]
+      }
+    ]
+  },
+  "Tuesday": {
+    "gk_focus": "Distribution - throws, goal kicks, driven balls",
+    "lift": "Lower A",
+    "target": {
+      "kcal": 4005,
+      "protein_g": 150,
+      "fat_g": 145,
+      "carbs_g": 525,
+      "fiber_g": 40
+    },
+    "sections": [
+      {
+        "name": "AFTER WAKEUP",
+        "tasks": [
+          {
+            "time": "07:00",
+            "task": "Wake - no snooze",
+            "detail": "Same time daily. 9 hours in bed the night before is the target.",
+            "is_substep": false
+          },
+          {
+            "time": "07:05",
+            "task": "Brush",
+            "detail": "Sensodyne (potassium nitrate + fluoride), soft brush, 2 min. Floss. Rinse thoroughly.",
+            "is_substep": false
+          },
+          {
+            "time": "07:15",
+            "task": "Skincare AM",
+            "detail": "Water rinse (gentle cleanser if oily) -> moisturizer -> SPF 30+ on face, ears, neck. Two fingers' length.",
+            "is_substep": false
+          },
+          {
+            "time": "07:20",
+            "task": "SPF lip balm",
+            "detail": "Every day, not just sunny ones.",
+            "is_substep": false
+          },
+          {
+            "time": "07:25",
+            "task": "Wall stand, 2 min",
+            "detail": "Heels, glutes, upper back, head all in contact. This is the reference posture.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "MORNING",
+        "tasks": [
+          {
+            "time": "08:00",
+            "task": "Breakfast - approx. 900 kcal",
+            "detail": "40P / 35F / 110C. Eat it even when not hungry; the surplus is the whole plan.",
+            "is_substep": false
+          },
+          {
+            "time": "08:45",
+            "task": "Whitening strips - 30 min",
+            "detail": "Only during the 20-treatment block. Needs 35+ min since brushing; pat teeth dry first; upper strip then lower, tooth surface only.",
+            "is_substep": false
+          },
+          {
+            "time": "09:15",
+            "task": "Strips out",
+            "detail": "Rinse with water. Do NOT brush for 60 min after.",
+            "is_substep": false
+          },
+          {
+            "time": "10:30",
+            "task": "Mid-morning feed - approx. 450 kcal",
+            "detail": "15P / 20F / 50C. Nuts, whole milk, fruit - dense and fast.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: doorways",
+            "detail": "Every doorway you walk through today: chest open, shoulders back and down, hands out of pockets.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: amplitude",
+            "detail": "Arms swinging from the shoulder, torso allowed to rotate, feet tracking slightly apart. Amplitude, not tempo.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "AFTERNOON",
+        "tasks": [
+          {
+            "time": "12:30",
+            "task": "Lunch - approx. 1,000 kcal",
+            "detail": "35P / 35F / 130C.",
+            "is_substep": false
+          },
+          {
+            "time": "16:00",
+            "task": "GK warm-up",
+            "detail": "10 min - footwork ladder, handling drops, mobility. Never dive cold.",
+            "is_substep": false
+          },
+          {
+            "time": "16:10",
+            "task": "GK technical block",
+            "detail": "20 min - set position, W-catch, collapse dive mechanics. Quality over volume.",
+            "is_substep": false
+          },
+          {
+            "time": "16:30",
+            "task": "GK main block",
+            "detail": "25 min - Distribution - throws, goal kicks, driven balls. Game-speed reps.",
+            "is_substep": false
+          },
+          {
+            "time": "16:55",
+            "task": "GK cool-down",
+            "detail": "5 min - hip/shoulder mobility, wrists and fingers.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "EVENING",
+        "tasks": [
+          {
+            "time": "17:30",
+            "task": "Lift - Lower A",
+            "detail": "Log every set. Progression: +5 lbs upper, +10 lbs lower once the top of the rep range is hit at target RIR.",
+            "is_substep": false
+          },
+          {
+            "time": null,
+            "task": "   Back squat",
+            "detail": "4 x 5-8, RIR 2-3",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Romanian deadlift",
+            "detail": "3 x 8-10, RIR 2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Leg press",
+            "detail": "3 x 10-12, RIR 1-2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Seated leg curl",
+            "detail": "3 x 10-12, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Standing calf raise",
+            "detail": "4 x 10-15, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Lateral raise",
+            "detail": "3 x 15-20, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Cable crunch",
+            "detail": "3 x 12-15, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": "18:50",
+            "task": "Shower",
+            "detail": "After every lift. Watch the chest and back.",
+            "is_substep": false
+          },
+          {
+            "time": "19:00",
+            "task": "Post-training feed - approx. 650 kcal",
+            "detail": "40P / 25F / 85C. Inside 90 min of finishing.",
+            "is_substep": false
+          },
+          {
+            "time": "20:00",
+            "task": "Dinner - approx. 1,000 kcal",
+            "detail": "20P / 30F / 150C. Check fiber for the day - 40g is the floor.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Daily totals check",
+            "detail": "4,005 kcal | 150P / 145F / 525C / 40g fiber. Under by 300+? Add a shake before bed.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "BEFORE BED",
+        "tasks": [
+          {
+            "time": "21:30",
+            "task": "Screens down",
+            "detail": "Last meal done, last strip long gone.",
+            "is_substep": false
+          },
+          {
+            "time": "21:40",
+            "task": "Brush + floss",
+            "detail": "Skip the mouthwash if you whitened today.",
+            "is_substep": false
+          },
+          {
+            "time": "21:45",
+            "task": "Skincare PM",
+            "detail": "Gentle cleanser -> moisturizer. That is the whole routine.",
+            "is_substep": false
+          },
+          {
+            "time": "21:50",
+            "task": "Small grooming check",
+            "detail": "Nails every 10-14 days | trimmer (neckline, ears, nose) weekly | brows every 3 weeks | haircut every 3-4 weeks.",
+            "is_substep": false
+          },
+          {
+            "time": "22:00",
+            "task": "Lights out",
+            "detail": "9 hours in bed. This is the single highest-leverage item on the sheet.",
+            "is_substep": false
+          }
+        ]
+      }
+    ]
+  },
+  "Wednesday": {
+    "gk_focus": "Reaction & reflex saves",
+    "lift": "Rowing 20-25 min, Zone 2",
+    "target": {
+      "kcal": 4005,
+      "protein_g": 150,
+      "fat_g": 145,
+      "carbs_g": 525,
+      "fiber_g": 40
+    },
+    "sections": [
+      {
+        "name": "AFTER WAKEUP",
+        "tasks": [
+          {
+            "time": "07:00",
+            "task": "Wake - no snooze",
+            "detail": "Same time daily. 9 hours in bed the night before is the target.",
+            "is_substep": false
+          },
+          {
+            "time": "07:05",
+            "task": "Brush",
+            "detail": "Sensodyne (potassium nitrate + fluoride), soft brush, 2 min. Floss. Rinse thoroughly.",
+            "is_substep": false
+          },
+          {
+            "time": "07:15",
+            "task": "Skincare AM",
+            "detail": "Water rinse (gentle cleanser if oily) -> moisturizer -> SPF 30+ on face, ears, neck. Two fingers' length.",
+            "is_substep": false
+          },
+          {
+            "time": "07:20",
+            "task": "SPF lip balm",
+            "detail": "Every day, not just sunny ones.",
+            "is_substep": false
+          },
+          {
+            "time": "07:25",
+            "task": "Wall stand, 2 min",
+            "detail": "Heels, glutes, upper back, head all in contact. This is the reference posture.",
+            "is_substep": false
+          },
+          {
+            "time": "07:30",
+            "task": "Shave (if needed)",
+            "detail": "After the shower, never before. Shave cream not canned foam. Zero pressure, short strokes, with the grain first. Cold rinse, pat dry, moisturize.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "MORNING",
+        "tasks": [
+          {
+            "time": "08:00",
+            "task": "Breakfast - approx. 900 kcal",
+            "detail": "40P / 35F / 110C. Eat it even when not hungry; the surplus is the whole plan.",
+            "is_substep": false
+          },
+          {
+            "time": "08:45",
+            "task": "Whitening strips - 30 min",
+            "detail": "Only during the 20-treatment block. Needs 35+ min since brushing; pat teeth dry first; upper strip then lower, tooth surface only.",
+            "is_substep": false
+          },
+          {
+            "time": "09:15",
+            "task": "Strips out",
+            "detail": "Rinse with water. Do NOT brush for 60 min after.",
+            "is_substep": false
+          },
+          {
+            "time": "10:30",
+            "task": "Mid-morning feed - approx. 450 kcal",
+            "detail": "15P / 20F / 50C. Nuts, whole milk, fruit - dense and fast.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: doorways",
+            "detail": "Every doorway you walk through today: chest open, shoulders back and down, hands out of pockets.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: amplitude",
+            "detail": "Arms swinging from the shoulder, torso allowed to rotate, feet tracking slightly apart. Amplitude, not tempo.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "AFTERNOON",
+        "tasks": [
+          {
+            "time": "12:30",
+            "task": "Lunch - approx. 1,000 kcal",
+            "detail": "35P / 35F / 130C.",
+            "is_substep": false
+          },
+          {
+            "time": "16:00",
+            "task": "GK warm-up",
+            "detail": "10 min - footwork ladder, handling drops, mobility. Never dive cold.",
+            "is_substep": false
+          },
+          {
+            "time": "16:10",
+            "task": "GK technical block",
+            "detail": "20 min - set position, W-catch, collapse dive mechanics. Quality over volume.",
+            "is_substep": false
+          },
+          {
+            "time": "16:30",
+            "task": "GK main block",
+            "detail": "25 min - Reaction & reflex saves. Game-speed reps.",
+            "is_substep": false
+          },
+          {
+            "time": "16:55",
+            "task": "GK cool-down",
+            "detail": "5 min - hip/shoulder mobility, wrists and fingers.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "EVENING",
+        "tasks": [
+          {
+            "time": "17:30",
+            "task": "Rowing - 20-25 min",
+            "detail": "Zone 2, conversational pace. You should be able to talk through it. Not intervals.",
+            "is_substep": false
+          },
+          {
+            "time": "18:00",
+            "task": "Shower",
+            "detail": "Watch the chest and back.",
+            "is_substep": false
+          },
+          {
+            "time": "19:00",
+            "task": "Post-training feed - approx. 650 kcal",
+            "detail": "40P / 25F / 85C. Inside 90 min of finishing.",
+            "is_substep": false
+          },
+          {
+            "time": "20:00",
+            "task": "Dinner - approx. 1,000 kcal",
+            "detail": "20P / 30F / 150C. Check fiber for the day - 40g is the floor.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Daily totals check",
+            "detail": "4,005 kcal | 150P / 145F / 525C / 40g fiber. Under by 300+? Add a shake before bed.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "BEFORE BED",
+        "tasks": [
+          {
+            "time": "21:30",
+            "task": "Screens down",
+            "detail": "Last meal done, last strip long gone.",
+            "is_substep": false
+          },
+          {
+            "time": "21:40",
+            "task": "Brush + floss",
+            "detail": "Skip the mouthwash if you whitened today.",
+            "is_substep": false
+          },
+          {
+            "time": "21:45",
+            "task": "Skincare PM",
+            "detail": "Gentle cleanser -> moisturizer. That is the whole routine.",
+            "is_substep": false
+          },
+          {
+            "time": "21:50",
+            "task": "Small grooming check",
+            "detail": "Nails every 10-14 days | trimmer (neckline, ears, nose) weekly | brows every 3 weeks | haircut every 3-4 weeks.",
+            "is_substep": false
+          },
+          {
+            "time": "22:00",
+            "task": "Lights out",
+            "detail": "9 hours in bed. This is the single highest-leverage item on the sheet.",
+            "is_substep": false
+          }
+        ]
+      }
+    ]
+  },
+  "Thursday": {
+    "gk_focus": "Crosses & aerial claims",
+    "lift": "Upper B",
+    "target": {
+      "kcal": 4005,
+      "protein_g": 150,
+      "fat_g": 145,
+      "carbs_g": 525,
+      "fiber_g": 40
+    },
+    "sections": [
+      {
+        "name": "AFTER WAKEUP",
+        "tasks": [
+          {
+            "time": "07:00",
+            "task": "Wake - no snooze",
+            "detail": "Same time daily. 9 hours in bed the night before is the target.",
+            "is_substep": false
+          },
+          {
+            "time": "07:05",
+            "task": "Brush",
+            "detail": "Sensodyne (potassium nitrate + fluoride), soft brush, 2 min. Floss. Rinse thoroughly.",
+            "is_substep": false
+          },
+          {
+            "time": "07:15",
+            "task": "Skincare AM",
+            "detail": "Water rinse (gentle cleanser if oily) -> moisturizer -> SPF 30+ on face, ears, neck. Two fingers' length.",
+            "is_substep": false
+          },
+          {
+            "time": "07:20",
+            "task": "SPF lip balm",
+            "detail": "Every day, not just sunny ones.",
+            "is_substep": false
+          },
+          {
+            "time": "07:25",
+            "task": "Wall stand, 2 min",
+            "detail": "Heels, glutes, upper back, head all in contact. This is the reference posture.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "MORNING",
+        "tasks": [
+          {
+            "time": "08:00",
+            "task": "Breakfast - approx. 900 kcal",
+            "detail": "40P / 35F / 110C. Eat it even when not hungry; the surplus is the whole plan.",
+            "is_substep": false
+          },
+          {
+            "time": "08:45",
+            "task": "Whitening strips - 30 min",
+            "detail": "Only during the 20-treatment block. Needs 35+ min since brushing; pat teeth dry first; upper strip then lower, tooth surface only.",
+            "is_substep": false
+          },
+          {
+            "time": "09:15",
+            "task": "Strips out",
+            "detail": "Rinse with water. Do NOT brush for 60 min after.",
+            "is_substep": false
+          },
+          {
+            "time": "10:30",
+            "task": "Mid-morning feed - approx. 450 kcal",
+            "detail": "15P / 20F / 50C. Nuts, whole milk, fruit - dense and fast.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: doorways",
+            "detail": "Every doorway you walk through today: chest open, shoulders back and down, hands out of pockets.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: amplitude",
+            "detail": "Arms swinging from the shoulder, torso allowed to rotate, feet tracking slightly apart. Amplitude, not tempo.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "AFTERNOON",
+        "tasks": [
+          {
+            "time": "12:30",
+            "task": "Lunch - approx. 1,000 kcal",
+            "detail": "35P / 35F / 130C.",
+            "is_substep": false
+          },
+          {
+            "time": "15:00",
+            "task": "Posture Track A - 15 min",
+            "detail": "Thoracic extension over roller 2x10 | Wall slides 3x10 | Chin tucks 3x10 (5s holds) | Doorway pec stretch 2x30s at three heights | Face pulls 3x15.",
+            "is_substep": false
+          },
+          {
+            "time": "16:00",
+            "task": "GK warm-up",
+            "detail": "10 min - footwork ladder, handling drops, mobility. Never dive cold.",
+            "is_substep": false
+          },
+          {
+            "time": "16:10",
+            "task": "GK technical block",
+            "detail": "20 min - set position, W-catch, collapse dive mechanics. Quality over volume.",
+            "is_substep": false
+          },
+          {
+            "time": "16:30",
+            "task": "GK main block",
+            "detail": "25 min - Crosses & aerial claims. Game-speed reps.",
+            "is_substep": false
+          },
+          {
+            "time": "16:55",
+            "task": "GK cool-down",
+            "detail": "5 min - hip/shoulder mobility, wrists and fingers.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "EVENING",
+        "tasks": [
+          {
+            "time": "17:30",
+            "task": "Lift - Upper B",
+            "detail": "Log every set. Progression: +5 lbs upper, +10 lbs lower once the top of the rep range is hit at target RIR.",
+            "is_substep": false
+          },
+          {
+            "time": null,
+            "task": "   Flat barbell bench",
+            "detail": "4 x 6-8, RIR 2-3",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Seal row / chest-supported row",
+            "detail": "4 x 8-10, RIR 2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Wide-grip lat pulldown",
+            "detail": "3 x 10-12, RIR 1-2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Dip or machine press",
+            "detail": "3 x 8-12, RIR 1-2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Cable lateral raise",
+            "detail": "4 x 12-20, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Rear delt flye",
+            "detail": "4 x 15-20, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Rope pushdown",
+            "detail": "3 x 12-15, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Hammer curl",
+            "detail": "3 x 10-12, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": "18:50",
+            "task": "Shower",
+            "detail": "After every lift. Watch the chest and back.",
+            "is_substep": false
+          },
+          {
+            "time": "19:00",
+            "task": "Post-training feed - approx. 650 kcal",
+            "detail": "40P / 25F / 85C. Inside 90 min of finishing.",
+            "is_substep": false
+          },
+          {
+            "time": "20:00",
+            "task": "Dinner - approx. 1,000 kcal",
+            "detail": "20P / 30F / 150C. Check fiber for the day - 40g is the floor.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Daily totals check",
+            "detail": "4,005 kcal | 150P / 145F / 525C / 40g fiber. Under by 300+? Add a shake before bed.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "BEFORE BED",
+        "tasks": [
+          {
+            "time": "21:30",
+            "task": "Screens down",
+            "detail": "Last meal done, last strip long gone.",
+            "is_substep": false
+          },
+          {
+            "time": "21:40",
+            "task": "Brush + floss",
+            "detail": "Skip the mouthwash if you whitened today.",
+            "is_substep": false
+          },
+          {
+            "time": "21:45",
+            "task": "Skincare PM",
+            "detail": "Gentle cleanser -> moisturizer. That is the whole routine.",
+            "is_substep": false
+          },
+          {
+            "time": "21:50",
+            "task": "Small grooming check",
+            "detail": "Nails every 10-14 days | trimmer (neckline, ears, nose) weekly | brows every 3 weeks | haircut every 3-4 weeks.",
+            "is_substep": false
+          },
+          {
+            "time": "22:00",
+            "task": "Lights out",
+            "detail": "9 hours in bed. This is the single highest-leverage item on the sheet.",
+            "is_substep": false
+          }
+        ]
+      }
+    ]
+  },
+  "Friday": {
+    "gk_focus": "1v1s, spreading, angle play",
+    "lift": "Lower B",
+    "target": {
+      "kcal": 4005,
+      "protein_g": 150,
+      "fat_g": 145,
+      "carbs_g": 525,
+      "fiber_g": 40
+    },
+    "sections": [
+      {
+        "name": "AFTER WAKEUP",
+        "tasks": [
+          {
+            "time": "07:00",
+            "task": "Wake - no snooze",
+            "detail": "Same time daily. 9 hours in bed the night before is the target.",
+            "is_substep": false
+          },
+          {
+            "time": "07:05",
+            "task": "Brush",
+            "detail": "Sensodyne (potassium nitrate + fluoride), soft brush, 2 min. Floss. Rinse thoroughly.",
+            "is_substep": false
+          },
+          {
+            "time": "07:15",
+            "task": "Skincare AM",
+            "detail": "Water rinse (gentle cleanser if oily) -> moisturizer -> SPF 30+ on face, ears, neck. Two fingers' length.",
+            "is_substep": false
+          },
+          {
+            "time": "07:20",
+            "task": "SPF lip balm",
+            "detail": "Every day, not just sunny ones.",
+            "is_substep": false
+          },
+          {
+            "time": "07:25",
+            "task": "Wall stand, 2 min",
+            "detail": "Heels, glutes, upper back, head all in contact. This is the reference posture.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "MORNING",
+        "tasks": [
+          {
+            "time": "08:00",
+            "task": "Breakfast - approx. 900 kcal",
+            "detail": "40P / 35F / 110C. Eat it even when not hungry; the surplus is the whole plan.",
+            "is_substep": false
+          },
+          {
+            "time": "08:45",
+            "task": "Whitening strips - 30 min",
+            "detail": "Only during the 20-treatment block. Needs 35+ min since brushing; pat teeth dry first; upper strip then lower, tooth surface only.",
+            "is_substep": false
+          },
+          {
+            "time": "09:15",
+            "task": "Strips out",
+            "detail": "Rinse with water. Do NOT brush for 60 min after.",
+            "is_substep": false
+          },
+          {
+            "time": "10:30",
+            "task": "Mid-morning feed - approx. 450 kcal",
+            "detail": "15P / 20F / 50C. Nuts, whole milk, fruit - dense and fast.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: doorways",
+            "detail": "Every doorway you walk through today: chest open, shoulders back and down, hands out of pockets.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Posture cue: amplitude",
+            "detail": "Arms swinging from the shoulder, torso allowed to rotate, feet tracking slightly apart. Amplitude, not tempo.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "AFTERNOON",
+        "tasks": [
+          {
+            "time": "12:30",
+            "task": "Lunch - approx. 1,000 kcal",
+            "detail": "35P / 35F / 130C.",
+            "is_substep": false
+          },
+          {
+            "time": "16:00",
+            "task": "GK warm-up",
+            "detail": "10 min - footwork ladder, handling drops, mobility. Never dive cold.",
+            "is_substep": false
+          },
+          {
+            "time": "16:10",
+            "task": "GK technical block",
+            "detail": "20 min - set position, W-catch, collapse dive mechanics. Quality over volume.",
+            "is_substep": false
+          },
+          {
+            "time": "16:30",
+            "task": "GK main block",
+            "detail": "25 min - 1v1s, spreading, angle play. Game-speed reps.",
+            "is_substep": false
+          },
+          {
+            "time": "16:55",
+            "task": "GK cool-down",
+            "detail": "5 min - hip/shoulder mobility, wrists and fingers.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "EVENING",
+        "tasks": [
+          {
+            "time": "17:30",
+            "task": "Lift - Lower B",
+            "detail": "Log every set. Progression: +5 lbs upper, +10 lbs lower once the top of the rep range is hit at target RIR.",
+            "is_substep": false
+          },
+          {
+            "time": null,
+            "task": "   Hack squat / front squat",
+            "detail": "3 x 8-10, RIR 2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Hip thrust",
+            "detail": "3 x 8-10, RIR 2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Bulgarian split squat",
+            "detail": "3 x 8-10, RIR 2",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Lying leg curl",
+            "detail": "3 x 12-15, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Seated calf raise",
+            "detail": "4 x 12-20, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Lateral raise",
+            "detail": "3 x 15-20, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": null,
+            "task": "   Hanging leg raise",
+            "detail": "3 x 10-15, RIR 1",
+            "is_substep": true
+          },
+          {
+            "time": "18:50",
+            "task": "Shower",
+            "detail": "After every lift. Watch the chest and back.",
+            "is_substep": false
+          },
+          {
+            "time": "19:00",
+            "task": "Post-training feed - approx. 650 kcal",
+            "detail": "40P / 25F / 85C. Inside 90 min of finishing.",
+            "is_substep": false
+          },
+          {
+            "time": "20:00",
+            "task": "Dinner - approx. 1,000 kcal",
+            "detail": "20P / 30F / 150C. Check fiber for the day - 40g is the floor.",
+            "is_substep": false
+          },
+          {
+            "time": "--",
+            "task": "Daily totals check",
+            "detail": "4,005 kcal | 150P / 145F / 525C / 40g fiber. Under by 300+? Add a shake before bed.",
+            "is_substep": false
+          }
+        ]
+      },
+      {
+        "name": "BEFORE BED",
+        "tasks": [
+          {
+            "time": "21:30",
+            "task": "Screens down",
+            "detail": "Last meal done, last strip long gone.",
+            "is_substep": false
+          },
+          {
+            "time": "21:40",
+            "task": "Brush + floss",
+            "detail": "Skip the mouthwash if you whitened today.",
+            "is_substep": false
+          },
+          {
+            "time": "21:45",
+            "task": "Skincare PM",
+            "detail": "Gentle cleanser -> moisturizer. That is the whole routine.",
+            "is_substep": false
+          },
+          {
+            "time": "21:50",
+            "task": "Small grooming check",
+            "detail": "Nails every 10-14 days | trimmer (neckline, ears, nose) weekly | brows every 3 weeks | haircut every 3-4 weeks.",
+            "is_substep": false
+          },
+          {
+            "time": "22:00",
+            "task": "Lights out",
+            "detail": "9 hours in bed. This is the single highest-leverage item on the sheet.",
+            "is_substep": false
+          }
+        ]
+      }
+    ]
+  }
+}

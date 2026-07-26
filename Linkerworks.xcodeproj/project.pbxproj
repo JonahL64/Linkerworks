@@ -6,14 +6,90 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		3EF7C90B301006BF003F0263 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3EF7C90A301006BF003F0263 /* WidgetKit.framework */; };
+		3EF7C90D301006BF003F0263 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3EF7C90C301006BF003F0263 /* SwiftUI.framework */; };
+		3EF7C91E301006CA003F0263 /* LinkerworksWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3EF7C908301006BF003F0263 /* LinkerworksWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A600000430100683003F0263 /* Domain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A600000130100683003F0263 /* Domain.swift */; };
+		A600000530100683003F0263 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A600000230100683003F0263 /* Models.swift */; };
+		A600000630100683003F0263 /* SharedModelContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A600000330100683003F0263 /* SharedModelContainer.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3EF7C91C301006CA003F0263 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3EF7C8EC30100683003F0263 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3EF7C907301006BF003F0263;
+			remoteInfo = LinkerworksWidgetExtension;
+		};
+		C100000330100683003F0263 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3EF7C8EC30100683003F0263 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3EF7C8F330100683003F0263;
+			remoteInfo = Linkerworks;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3EF7C923301006CA003F0263 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3EF7C91E301006CA003F0263 /* LinkerworksWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		3EF7C8F430100683003F0263 /* Linkerworks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Linkerworks.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3EF7C908301006BF003F0263 /* LinkerworksWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LinkerworksWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		3EF7C90A301006BF003F0263 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		3EF7C90C301006BF003F0263 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		3EF7C925301007C9003F0263 /* LinkerworksWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LinkerworksWidgetExtension.entitlements; sourceTree = "<group>"; };
+		3EF7C985301414A6003F0263 /* LinkerworksTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LinkerworksTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A600000130100683003F0263 /* Domain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Domain.swift; path = Linkerworks/Domain.swift; sourceTree = SOURCE_ROOT; };
+		A600000230100683003F0263 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Models.swift; path = Linkerworks/Models.swift; sourceTree = SOURCE_ROOT; };
+		A600000330100683003F0263 /* SharedModelContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedModelContainer.swift; path = Linkerworks/SharedModelContainer.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3EF7C91F301006CA003F0263 /* Exceptions for "LinkerworksWidget" folder in "LinkerworksWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3EF7C907301006BF003F0263 /* LinkerworksWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3EF7C8F630100683003F0263 /* Linkerworks */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Linkerworks;
+			sourceTree = "<group>";
+		};
+		3EF7C90E301006BF003F0263 /* LinkerworksWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3EF7C91F301006CA003F0263 /* Exceptions for "LinkerworksWidget" folder in "LinkerworksWidgetExtension" target */,
+			);
+			path = LinkerworksWidget;
+			sourceTree = "<group>";
+		};
+		A100000130100683003F0263 /* data */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = data;
+			sourceTree = "<group>";
+		};
+		C100000230100683003F0263 /* LinkerworksTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LinkerworksTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -26,13 +102,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3EF7C905301006BF003F0263 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3EF7C90D301006BF003F0263 /* SwiftUI.framework in Frameworks */,
+				3EF7C90B301006BF003F0263 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		3EF7C8EB30100683003F0263 = {
 			isa = PBXGroup;
 			children = (
+				3EF7C925301007C9003F0263 /* LinkerworksWidgetExtension.entitlements */,
+				A600000030100683003F0263 /* Shared Widget Data */,
 				3EF7C8F630100683003F0263 /* Linkerworks */,
+				A100000130100683003F0263 /* data */,
+				3EF7C90E301006BF003F0263 /* LinkerworksWidget */,
+				C100000230100683003F0263 /* LinkerworksTests */,
+				3EF7C909301006BF003F0263 /* Frameworks */,
 				3EF7C8F530100683003F0263 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +132,29 @@
 			isa = PBXGroup;
 			children = (
 				3EF7C8F430100683003F0263 /* Linkerworks.app */,
+				3EF7C908301006BF003F0263 /* LinkerworksWidgetExtension.appex */,
+				3EF7C985301414A6003F0263 /* LinkerworksTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		3EF7C909301006BF003F0263 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				3EF7C90A301006BF003F0263 /* WidgetKit.framework */,
+				3EF7C90C301006BF003F0263 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A600000030100683003F0263 /* Shared Widget Data */ = {
+			isa = PBXGroup;
+			children = (
+				A600000130100683003F0263 /* Domain.swift */,
+				A600000230100683003F0263 /* Models.swift */,
+				A600000330100683003F0263 /* SharedModelContainer.swift */,
+			);
+			name = "Shared Widget Data";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,13 +167,16 @@
 				3EF7C8F030100683003F0263 /* Sources */,
 				3EF7C8F130100683003F0263 /* Frameworks */,
 				3EF7C8F230100683003F0263 /* Resources */,
+				3EF7C923301006CA003F0263 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				3EF7C91D301006CA003F0263 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3EF7C8F630100683003F0263 /* Linkerworks */,
+				A100000130100683003F0263 /* data */,
 			);
 			name = Linkerworks;
 			packageProductDependencies = (
@@ -69,6 +184,50 @@
 			productName = Linkerworks;
 			productReference = 3EF7C8F430100683003F0263 /* Linkerworks.app */;
 			productType = "com.apple.product-type.application";
+		};
+		3EF7C907301006BF003F0263 /* LinkerworksWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3EF7C920301006CA003F0263 /* Build configuration list for PBXNativeTarget "LinkerworksWidgetExtension" */;
+			buildPhases = (
+				3EF7C904301006BF003F0263 /* Sources */,
+				3EF7C905301006BF003F0263 /* Frameworks */,
+				3EF7C906301006BF003F0263 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				3EF7C90E301006BF003F0263 /* LinkerworksWidget */,
+			);
+			name = LinkerworksWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = LinkerworksWidgetExtension;
+			productReference = 3EF7C908301006BF003F0263 /* LinkerworksWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		C100000430100683003F0263 /* LinkerworksTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C100000B30100683003F0263 /* Build configuration list for PBXNativeTarget "LinkerworksTests" */;
+			buildPhases = (
+				C100000530100683003F0263 /* Sources */,
+				C100000730100683003F0263 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C100000930100683003F0263 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C100000230100683003F0263 /* LinkerworksTests */,
+			);
+			name = LinkerworksTests;
+			packageProductDependencies = (
+			);
+			productName = LinkerworksTests;
+			productReference = 3EF7C985301414A6003F0263 /* LinkerworksTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -81,6 +240,12 @@
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					3EF7C8F330100683003F0263 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					3EF7C907301006BF003F0263 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					C100000430100683003F0263 = {
 						CreatedOnToolsVersion = 26.6;
 					};
 				};
@@ -100,12 +265,28 @@
 			projectRoot = "";
 			targets = (
 				3EF7C8F330100683003F0263 /* Linkerworks */,
+				3EF7C907301006BF003F0263 /* LinkerworksWidgetExtension */,
+				C100000430100683003F0263 /* LinkerworksTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		3EF7C8F230100683003F0263 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3EF7C906301006BF003F0263 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C100000730100683003F0263 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +303,37 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3EF7C904301006BF003F0263 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A600000430100683003F0263 /* Domain.swift in Sources */,
+				A600000530100683003F0263 /* Models.swift in Sources */,
+				A600000630100683003F0263 /* SharedModelContainer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C100000530100683003F0263 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3EF7C91D301006CA003F0263 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3EF7C907301006BF003F0263 /* LinkerworksWidgetExtension */;
+			targetProxy = 3EF7C91C301006CA003F0263 /* PBXContainerItemProxy */;
+		};
+		C100000930100683003F0263 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3EF7C8F330100683003F0263 /* Linkerworks */;
+			targetProxy = C100000330100683003F0263 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3EF7C8FF30100688003F0263 /* Debug */ = {
@@ -246,6 +457,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Linkerworks/Linkerworks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = H5Z9QKC4TZ;
@@ -290,6 +502,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Linkerworks/Linkerworks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = H5Z9QKC4TZ;
@@ -329,6 +542,111 @@
 			};
 			name = Release;
 		};
+		3EF7C921301006CA003F0263 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = LinkerworksWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H5Z9QKC4TZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LinkerworksWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LinkerworksWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jonah.Linkerworks.LinkerworksWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3EF7C922301006CA003F0263 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = LinkerworksWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H5Z9QKC4TZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LinkerworksWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LinkerworksWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jonah.Linkerworks.LinkerworksWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		C100000A30100683003F0263 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = H5Z9QKC4TZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				PRODUCT_BUNDLE_IDENTIFIER = jonah.LinkerworksTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Linkerworks.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Linkerworks";
+			};
+			name = Debug;
+		};
+		C100000C30100683003F0263 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = H5Z9QKC4TZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				PRODUCT_BUNDLE_IDENTIFIER = jonah.LinkerworksTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Linkerworks.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Linkerworks";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -346,6 +664,24 @@
 			buildConfigurations = (
 				3EF7C90230100688003F0263 /* Debug */,
 				3EF7C90330100688003F0263 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3EF7C920301006CA003F0263 /* Build configuration list for PBXNativeTarget "LinkerworksWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3EF7C921301006CA003F0263 /* Debug */,
+				3EF7C922301006CA003F0263 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C100000B30100683003F0263 /* Build configuration list for PBXNativeTarget "LinkerworksTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C100000A30100683003F0263 /* Debug */,
+				C100000C30100683003F0263 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
