@@ -13,6 +13,7 @@ struct NutritionView: View {
     @State private var entryToEdit: MealEntry?
     @State private var isPresentingTargetEditor = false
     @State private var isPresentingSavedMealManager = false
+    @State private var quickLogMeal: QuickLogMeal?
     @State private var saveErrorMessage: String?
 
     private let calendar = Calendar.current
@@ -88,6 +89,9 @@ struct NutritionView: View {
             MacroTargetEditorView(target: macroTargets.first { $0.key == DailyMacroTarget.singletonKey })
         }
         .sheet(isPresented: $isPresentingSavedMealManager) { SavedMealManagerView() }
+        .sheet(item: $quickLogMeal) { meal in
+            MealCategoryPickerView(meal: meal) { category in quickLog(meal, as: category) }
+        }
         .alert("Unable to Save", isPresented: Binding(
             get: { saveErrorMessage != nil },
             set: { if !$0 { saveErrorMessage = nil } }
@@ -134,7 +138,7 @@ struct NutritionView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(recentEntries) { entry in
-                            Button { quickLog(entry) } label: {
+                            Button { quickLogMeal = QuickLogMeal(entry: entry) } label: {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(entry.foodName).lineLimit(1)
                                     Text("\(entry.calories) kcal · \(entry.mealCategory.displayName)")
@@ -158,7 +162,7 @@ struct NutritionView: View {
                 ForEach(savedMeals) { meal in
                     HStack {
                     Button {
-                        quickLog(meal, multiplier: 1)
+                        quickLogMeal = QuickLogMeal(meal: meal, multiplier: 1)
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(meal.foodName)
@@ -171,9 +175,9 @@ struct NutritionView: View {
                     .buttonStyle(.plain)
                     Spacer()
                     Menu("×1") {
-                        Button("×1") { quickLog(meal, multiplier: 1) }
-                        Button("×1.5") { quickLog(meal, multiplier: 1.5) }
-                        Button("×2") { quickLog(meal, multiplier: 2) }
+                        Button("×1") { quickLogMeal = QuickLogMeal(meal: meal, multiplier: 1) }
+                        Button("×1.5") { quickLogMeal = QuickLogMeal(meal: meal, multiplier: 1.5) }
+                        Button("×2") { quickLogMeal = QuickLogMeal(meal: meal, multiplier: 2) }
                     }.font(.caption.monospacedDigit())
                     }
                     .trainingLogRow()
@@ -265,33 +269,32 @@ struct NutritionView: View {
             ))
         }
 
-        return saveContext()
+        let didSave = saveContext()
+        if didSave && draft.saveAsFavorite {
+            saveFavorite(draft)
+        }
+        return didSave
     }
 
-    private func quickLog(_ meal: SavedMeal, multiplier: Double = 1) {
+    private func quickLog(_ meal: QuickLogMeal, as category: MealCategory) {
         let sortOrder = mealEntries
             .filter { calendar.isDate($0.date, inSameDayAs: selectedDate) }
-            .filter { $0.mealCategory == meal.mealCategory }
+            .filter { $0.mealCategory == category }
             .map(\.sortOrder)
             .max()
             .map { $0 + 1 } ?? 0
         modelContext.insert(MealEntry(
             date: selectedDate,
-            mealCategory: meal.mealCategory,
+            mealCategory: category,
             foodName: meal.foodName,
-            calories: scaled(meal.calories, by: multiplier),
-            proteinGrams: scaled(meal.proteinGrams, by: multiplier),
-            carbohydrateGrams: scaled(meal.carbohydrateGrams, by: multiplier),
-            fatGrams: scaled(meal.fatGrams, by: multiplier),
-            fiberGrams: scaled(meal.fiberGrams, by: multiplier),
+            calories: scaled(meal.calories, by: meal.multiplier),
+            proteinGrams: scaled(meal.proteinGrams, by: meal.multiplier),
+            carbohydrateGrams: scaled(meal.carbohydrateGrams, by: meal.multiplier),
+            fatGrams: scaled(meal.fatGrams, by: meal.multiplier),
+            fiberGrams: scaled(meal.fiberGrams, by: meal.multiplier),
             sortOrder: sortOrder
         ))
         _ = saveContext()
-    }
-
-    private func quickLog(_ entry: MealEntry) {
-        let clone = SavedMeal(mealCategory: entry.mealCategory, foodName: entry.foodName, calories: entry.calories, proteinGrams: entry.proteinGrams, carbohydrateGrams: entry.carbohydrateGrams, fatGrams: entry.fatGrams, fiberGrams: entry.fiberGrams, sortOrder: 0)
-        quickLog(clone)
     }
 
     private func scaled(_ value: Int, by multiplier: Double) -> Int { Int((Double(value) * multiplier).rounded()) }
@@ -305,26 +308,30 @@ struct NutritionView: View {
     }
 
     private func saveFavorite(_ entry: MealEntry) {
+        saveFavorite(MealEntryDraft(entry: entry))
+    }
+
+    private func saveFavorite(_ draft: MealEntryDraft) {
         guard !savedMeals.contains(where: { meal in
-            meal.mealCategory == entry.mealCategory
-                && meal.foodName.caseInsensitiveCompare(entry.foodName) == .orderedSame
-                && meal.calories == entry.calories
-                && meal.proteinGrams == entry.proteinGrams
-                && meal.carbohydrateGrams == entry.carbohydrateGrams
-                && meal.fatGrams == entry.fatGrams
-                && meal.fiberGrams == entry.fiberGrams
+            meal.mealCategory == draft.category
+                && meal.foodName.caseInsensitiveCompare(draft.foodName) == .orderedSame
+                && meal.calories == draft.calories
+                && meal.proteinGrams == draft.proteinGrams
+                && meal.carbohydrateGrams == draft.carbohydrateGrams
+                && meal.fatGrams == draft.fatGrams
+                && meal.fiberGrams == draft.fiberGrams
         }) else {
             return
         }
 
         modelContext.insert(SavedMeal(
-            mealCategory: entry.mealCategory,
-            foodName: entry.foodName,
-            calories: entry.calories,
-            proteinGrams: entry.proteinGrams,
-            carbohydrateGrams: entry.carbohydrateGrams,
-            fatGrams: entry.fatGrams,
-            fiberGrams: entry.fiberGrams,
+            mealCategory: draft.category,
+            foodName: draft.foodName,
+            calories: draft.calories,
+            proteinGrams: draft.proteinGrams,
+            carbohydrateGrams: draft.carbohydrateGrams,
+            fatGrams: draft.fatGrams,
+            fiberGrams: draft.fiberGrams,
             sortOrder: savedMeals.count
         ))
         _ = saveContext()
@@ -469,6 +476,44 @@ private struct MealEntryRow: View {
     }
 }
 
+private struct QuickLogMeal: Identifiable {
+    let id = UUID()
+    let defaultCategory: MealCategory
+    let foodName: String
+    let calories: Int
+    let proteinGrams: Int
+    let carbohydrateGrams: Int
+    let fatGrams: Int
+    let fiberGrams: Int
+    let multiplier: Double
+
+    init(meal: SavedMeal, multiplier: Double) {
+        defaultCategory = meal.mealCategory; foodName = meal.foodName; calories = meal.calories; proteinGrams = meal.proteinGrams; carbohydrateGrams = meal.carbohydrateGrams; fatGrams = meal.fatGrams; fiberGrams = meal.fiberGrams; self.multiplier = multiplier
+    }
+    init(entry: MealEntry) {
+        defaultCategory = entry.mealCategory; foodName = entry.foodName; calories = entry.calories; proteinGrams = entry.proteinGrams; carbohydrateGrams = entry.carbohydrateGrams; fatGrams = entry.fatGrams; fiberGrams = entry.fiberGrams; multiplier = 1
+    }
+}
+
+private struct MealCategoryPickerView: View {
+    let meal: QuickLogMeal
+    let onLog: (MealCategory) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var category: MealCategory
+    init(meal: QuickLogMeal, onLog: @escaping (MealCategory) -> Void) {
+        self.meal = meal; self.onLog = onLog; _category = State(initialValue: meal.defaultCategory)
+    }
+    var body: some View {
+        NavigationStack { Form {
+            Text(meal.foodName).font(.headline)
+            Picker("Log as", selection: $category) { ForEach(MealCategory.allCases) { Text($0.displayName).tag($0) } }
+        }.trainingLogForm().navigationTitle("Log Meal").toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) { Button("Log") { onLog(category); dismiss() } }
+        }}.trainingLogNavigation()
+    }
+}
+
 @MainActor
 private struct MealEntryEditorView: View {
     let entry: MealEntry?
@@ -485,6 +530,7 @@ private struct MealEntryEditorView: View {
     @State private var fatGrams: String
     @State private var fiberGrams: String
     @State private var showsDetails: Bool
+    @State private var saveAsFavorite = false
     @State private var validationMessage: String?
 
     init(
@@ -527,6 +573,10 @@ private struct MealEntryEditorView: View {
                         macroField("Fat", value: $fatGrams, suffix: "g")
                         macroField("Fiber", value: $fiberGrams, suffix: "g")
                     }
+                }
+
+                if entry == nil {
+                    Toggle("Save as favorite", isOn: $saveAsFavorite)
                 }
             }
             .trainingLogForm()
@@ -589,6 +639,7 @@ private struct MealEntryEditorView: View {
             carbohydrateGrams: carbohydrateGrams,
             fatGrams: fatGrams,
             fiberGrams: fiberGrams
+            , saveAsFavorite: saveAsFavorite
         ))
         if didSave {
             dismiss()
@@ -707,6 +758,15 @@ private struct MealEntryDraft {
     let carbohydrateGrams: Int
     let fatGrams: Int
     let fiberGrams: Int
+    let saveAsFavorite: Bool
+
+    init(date: Date, category: MealCategory, foodName: String, calories: Int, proteinGrams: Int, carbohydrateGrams: Int, fatGrams: Int, fiberGrams: Int, saveAsFavorite: Bool = false) {
+        self.date = date; self.category = category; self.foodName = foodName; self.calories = calories; self.proteinGrams = proteinGrams; self.carbohydrateGrams = carbohydrateGrams; self.fatGrams = fatGrams; self.fiberGrams = fiberGrams; self.saveAsFavorite = saveAsFavorite
+    }
+
+    init(entry: MealEntry) {
+        self.init(date: entry.date, category: entry.mealCategory, foodName: entry.foodName, calories: entry.calories, proteinGrams: entry.proteinGrams, carbohydrateGrams: entry.carbohydrateGrams, fatGrams: entry.fatGrams, fiberGrams: entry.fiberGrams)
+    }
 }
 
 private struct NutritionReferenceView: View {

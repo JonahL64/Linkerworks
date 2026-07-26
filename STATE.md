@@ -251,6 +251,12 @@ Blank or whitespace-only titles still render as `WORKOUT IN PROGRESS`; nonblank 
 No workout models, persistence, or UI behavior beyond resolving the compile error changed.
 Validation passed: `swiftc -parse Linkerworks/ContentView.swift` and `git diff --check`.
 
+Nutrition quick-log follow-up changed `NutritionView.swift` and `ContentView.swift` only; no model schema changed.
+Add Meal now exposes a visible Save as favorite toggle, while the existing star on logged meals remains available.
+Tapping a saved favorite or Recent meal now opens a Log Meal category picker for the selected date instead of silently using the preset/history category.
+Todayâ€™s EATING shortcuts similarly ask the user to choose Breakfast, Lunch, Dinner, Snack, or Other before saving the independent MealEntry copy.
+Validation passed: `swiftc -parse Linkerworks/NutritionView.swift Linkerworks/ContentView.swift` and `git diff --check`; Xcode/device interaction testing remains required.
+
 Sprint 7 Nutrition friction changed `Linkerworks/NutritionView.swift` and `Linkerworks/ContentView.swift` only; MealEntry, SavedMeal, and DailyMacroTarget schemas are unchanged.
 Nutrition has a last-10 distinct Recent re-log strip, Copy Yesterday, and saved-meal quick-log multipliers (x1/x1.5/x2) that proportionally round every macro before saving a new entry.
 Saved Meals now has a manager reachable from Nutritionâ€™s overflow menu: presets can be edited, deleted, and drag-reordered; all actions operate only on SavedMeal objects and never mutate or delete MealEntry history.

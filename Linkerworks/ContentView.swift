@@ -74,6 +74,7 @@ private struct TodayView: View {
     @State private var undoState: CompletionUndo?
     @State private var isSavingCompletion = false
     @State private var currentTime = Date()
+    @State private var favoriteAwaitingCategory: SavedMeal?
 
     private let calendar = Calendar.current
 
@@ -268,7 +269,7 @@ private struct TodayView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(Array(savedMeals.prefix(4))) { meal in
-                                    Button { quickLogFavorite(meal) } label: {
+                                    Button { favoriteAwaitingCategory = meal } label: {
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text(meal.foodName).lineLimit(1)
                                             Text("\(meal.calories) kcal · \(meal.mealCategory.displayName)")
@@ -338,6 +339,18 @@ private struct TodayView: View {
                 }
             }
             .navigationTitle("Today")
+            .confirmationDialog(
+                "Log \(favoriteAwaitingCategory?.foodName ?? "meal") as",
+                isPresented: Binding(get: { favoriteAwaitingCategory != nil }, set: { if !$0 { favoriteAwaitingCategory = nil } })
+            ) {
+                ForEach(MealCategory.allCases) { category in
+                    Button(category.displayName) {
+                        if let meal = favoriteAwaitingCategory { quickLogFavorite(meal, as: category) }
+                        favoriteAwaitingCategory = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) { favoriteAwaitingCategory = nil }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
@@ -784,11 +797,11 @@ private struct TodayView: View {
         }
     }
 
-    private func quickLogFavorite(_ meal: SavedMeal) {
-        let order = mealEntriesForToday(category: meal.mealCategory).map(\.sortOrder).max().map { $0 + 1 } ?? 0
+    private func quickLogFavorite(_ meal: SavedMeal, as category: MealCategory) {
+        let order = mealEntriesForToday(category: category).map(\.sortOrder).max().map { $0 + 1 } ?? 0
         modelContext.insert(MealEntry(
             date: today,
-            mealCategory: meal.mealCategory,
+            mealCategory: category,
             foodName: meal.foodName,
             calories: meal.calories,
             proteinGrams: meal.proteinGrams,
