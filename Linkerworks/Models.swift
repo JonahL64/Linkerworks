@@ -165,6 +165,84 @@ final class Assignment {
     }
 }
 
+/// A one-off commitment for a specific calendar day. This deliberately has no
+/// relationship to routine tasks or homework assignments, so it cannot alter
+/// routine history, progress, or streak calculations.
+@Model
+final class DailyTodo {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var scheduledDate: Date
+    /// Stable calendar-day identity. `scheduledDate` remains useful for editing,
+    /// while this key preserves the intended local day across timezone changes.
+    var scheduledDayKey: String
+    var isCompleted: Bool
+    var completedAt: Date?
+    var sortOrder: Int
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        scheduledDate: Date,
+        isCompleted: Bool = false,
+        completedAt: Date? = nil,
+        sortOrder: Int,
+        createdAt: Date = Date(),
+        updatedAt: Date = Date(),
+        calendar: Calendar = .current
+    ) {
+        self.id = id
+        self.title = title
+        self.scheduledDate = calendar.startOfDay(for: scheduledDate)
+        self.scheduledDayKey = DailyTodoSupport.dayKey(for: scheduledDate, calendar: calendar)
+        self.isCompleted = isCompleted
+        self.completedAt = isCompleted ? (completedAt ?? Date()) : nil
+        self.sortOrder = sortOrder
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+enum DailyTodoSupport {
+    static func normalizedDate(_ date: Date, calendar: Calendar = .current) -> Date {
+        calendar.startOfDay(for: date)
+    }
+
+    static func dayKey(for date: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 0,
+            components.month ?? 0,
+            components.day ?? 0
+        )
+    }
+
+    static func date(for dayKey: String, calendar: Calendar = .current) -> Date? {
+        let parts = dayKey.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else { return nil }
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))
+    }
+
+    static func todos(on date: Date, from todos: [DailyTodo], calendar: Calendar = .current) -> [DailyTodo] {
+        let dayKey = dayKey(for: date, calendar: calendar)
+        return ordered(todos.filter { $0.scheduledDayKey == dayKey })
+    }
+
+    static func ordered(_ todos: [DailyTodo]) -> [DailyTodo] {
+        todos.sorted { lhs, rhs in
+            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+    }
+}
+
 @Model
 final class CalendarEvent {
     @Attribute(.unique) var id: UUID

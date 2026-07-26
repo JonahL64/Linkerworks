@@ -376,3 +376,12 @@ Sprint 11 is incomplete against its own acceptance criteria: Plan ships month pl
 Hardening gaps include portable export/restore, explicit schema migration planning, recoverable launch failures, consistent save-error handling, destination-specific deep links, and remaining design-token violations.
 Recommended centralization sequence: harden data safety first, then add a universal Inbox and search, Areas/Projects/Goals linking, a unified daily brief/weekly review, and recurrence/templates.
 The autonomous feature brainstorm and HTML keepsake live in `_bmad-output/brainstorming/brainstorm-personal-planning-centralization-2026-07-26/`.
+
+Daily to-dos added a standalone `DailyTodo` SwiftData model in `Linkerworks/Models.swift`, registered in the existing App Group schema by `Linkerworks/SharedModelContainer.swift`.
+`DailyTodo` normalizes scheduled dates, tracks deterministic order, completion timestamp/state, and created/updated timestamps; it has no routine, homework, snapshot, streak, or widget relationship.
+Today in `Linkerworks/ContentView.swift` now shows selected-routine-day to-dos with quick add, inline complete/reopen, edit, confirmation delete, haptics, validation, and rollback-safe saves.
+`Linkerworks/DailyTodosView.swift` supplies the date-based Paper & Ink manager/editor with separate active and Done groups, future-date planning, edit, and permanent deletion.
+Plan in `Linkerworks/CalendarPlanView.swift` links to the manager, shows a distinct outlined to-do date marker, and appends date-specific to-do agenda rows without changing event or homework behavior.
+`LinkerworksTests/DailyTodoTests.swift` covers stable normalized day keys across timezone changes, deterministic ordering, completion transitions, future-day/held-routine-day visibility, and routine-progress calculation isolation.
+Validation passed: `swiftc -parse Linkerworks/*.swift LinkerworksWidget/*.swift LinkerworksTests/*.swift` and `git diff --check`.
+Full typecheck/build, SwiftData migration, XCTest execution, and device UI validation remain unavailable because the active developer directory has Command Line Tools only; `swiftc -typecheck` cannot import UIKit and `xcodebuild` requires full Xcode.

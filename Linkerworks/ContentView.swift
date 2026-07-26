@@ -58,6 +58,7 @@ private struct TodayView: View {
     @Query(sort: \DaySchedule.weekdayIndex) private var daySchedules: [DaySchedule]
     @Query(sort: \CompletionRecord.completedAt) private var completionRecords: [CompletionRecord]
     @Query private var assignments: [Assignment]
+    @Query private var dailyTodos: [DailyTodo]
     @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var workoutSessions: [WorkoutSession]
     @Query(sort: \SavedMeal.sortOrder) private var savedMeals: [SavedMeal]
 
@@ -76,6 +77,10 @@ private struct TodayView: View {
     @State private var routineDay = RoutineDaySelection.selectedDay()
     @State private var showingRolloverConfirmation = false
     @State private var goalkeepingRestDayRevision = 0
+    @State private var quickTodoTitle = ""
+    @State private var quickTodoValidationMessage: String?
+    @State private var todoToEdit: DailyTodo?
+    @State private var todoDeletionCandidate: DailyTodo?
 
     private let calendar = Calendar.current
 
@@ -195,6 +200,10 @@ private struct TodayView: View {
         workoutSessions.first { $0.state == .inProgress }
     }
 
+    private var todosForToday: [DailyTodo] {
+        DailyTodoSupport.todos(on: today, from: dailyTodos, calendar: calendar)
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -212,6 +221,8 @@ private struct TodayView: View {
                 if homeworkIntegrationEnabled && (!dueTodayAssignments.isEmpty || overdueAssignmentCount > 0) {
                     dueTodaySection
                 }
+
+                todosSection
 
                 if !savedMeals.isEmpty {
                     savedMealsSection
@@ -264,6 +275,22 @@ private struct TodayView: View {
             } message: {
                 Text("Your routine is still set to \(today.formatted(.dateTime.weekday(.wide).month(.wide).day())).")
             }
+            .confirmationDialog(
+                "Delete to-do?",
+                isPresented: Binding(
+                    get: { todoDeletionCandidate != nil },
+                    set: { if !$0 { todoDeletionCandidate = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) { deleteTodo() }
+                Button("Cancel", role: .cancel) { todoDeletionCandidate = nil }
+            } message: {
+                Text("This permanently removes only this to-do.")
+            }
+            .sheet(item: $todoToEdit) { todo in
+                DailyTodoEditorView(todo: todo, selectedDate: today)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
@@ -284,7 +311,7 @@ private struct TodayView: View {
                 }
             }
             .overlay {
-                if todaySchedule == nil {
+                if todaySchedule == nil && todosForToday.isEmpty {
                     ContentUnavailableView(
                         "No Schedule for Today",
                         systemImage: "calendar.badge.exclamationmark"
@@ -292,7 +319,7 @@ private struct TodayView: View {
                 }
             }
             .alert(
-                "Could Not Save Completion",
+                "Unable to Save",
                 isPresented: Binding(
                     get: { saveErrorMessage != nil },
                     set: { if !$0 { saveErrorMessage = nil } }
@@ -528,6 +555,70 @@ private struct TodayView: View {
                 }
             }
             .padding(.vertical, 3)
+        }
+    }
+
+    private var todosSection: some View {
+        SwiftUI.Section("To-dos") {
+            HStack(spacing: LWSpace.xs) {
+                TextField("Add a to-do", text: $quickTodoTitle)
+                    .font(LWFont.body)
+                    .submitLabel(.done)
+                    .onSubmit { addQuickTodo() }
+
+                Button("Add") { addQuickTodo() }
+                    .font(LWFont.calloutMedium)
+                    .foregroundStyle(LWColor.accent)
+                    .frame(
+                        minWidth: LWSpace.minTapTarget,
+                        minHeight: LWSpace.minTapTarget
+                    )
+                    .buttonStyle(.plain)
+            }
+
+            if let quickTodoValidationMessage {
+                Text(quickTodoValidationMessage)
+                    .font(LWFont.caption)
+                    .foregroundStyle(LWColor.danger)
+            }
+
+            if todosForToday.isEmpty {
+                Text("Nothing to do yet.")
+                    .font(LWFont.callout)
+                    .foregroundStyle(LWColor.inkSecondary)
+            } else {
+                ForEach(todosForToday) { todo in
+                    todayTodoRow(todo)
+                }
+            }
+        }
+    }
+
+    private func todayTodoRow(_ todo: DailyTodo) -> some View {
+        HStack(spacing: LWSpace.sm) {
+            Button { toggleTodo(todo) } label: {
+                LWCheckControl(state: todo.isCompleted ? .complete : .pending)
+            }
+            .buttonStyle(.plain)
+            .frame(minWidth: LWSpace.minTapTarget, minHeight: LWSpace.minTapTarget)
+            .accessibilityLabel(todo.isCompleted ? "Mark \(todo.title) incomplete" : "Mark \(todo.title) complete")
+
+            Button { todoToEdit = todo } label: {
+                Text(todo.title)
+                    .font(LWFont.body)
+                    .foregroundStyle(todo.isCompleted ? LWColor.inkSecondary : LWColor.ink)
+                    .strikethrough(todo.isCompleted, color: LWColor.inkTertiary)
+                    .frame(maxWidth: .infinity, minHeight: LWSpace.minTapTarget, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Edit \(todo.title)")
+        }
+        .trainingLogRow()
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) { todoDeletionCandidate = todo } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
     }
 
@@ -948,6 +1039,60 @@ private struct TodayView: View {
             }
         } catch {
             modelContext.rollback()
+            saveErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func addQuickTodo() {
+        let title = quickTodoTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else {
+            quickTodoValidationMessage = "Enter a to-do before adding it."
+            return
+        }
+
+        let highestOrder = todosForToday.map(\.sortOrder).max()
+        let sortOrder = highestOrder == Int.max ? 0 : (highestOrder.map { $0 + 1 } ?? 0)
+        modelContext.insert(DailyTodo(
+            title: title,
+            scheduledDate: today,
+            sortOrder: sortOrder,
+            calendar: calendar
+        ))
+
+        do {
+            try modelContext.save()
+            quickTodoTitle = ""
+            quickTodoValidationMessage = nil
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } catch {
+            modelContext.rollback()
+            saveErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func toggleTodo(_ todo: DailyTodo) {
+        todo.isCompleted.toggle()
+        todo.completedAt = todo.isCompleted ? Date() : nil
+        todo.updatedAt = Date()
+        do {
+            try modelContext.save()
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } catch {
+            modelContext.rollback()
+            saveErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func deleteTodo() {
+        guard let todoDeletionCandidate else { return }
+        modelContext.delete(todoDeletionCandidate)
+        do {
+            try modelContext.save()
+            self.todoDeletionCandidate = nil
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } catch {
+            modelContext.rollback()
+            self.todoDeletionCandidate = nil
             saveErrorMessage = error.localizedDescription
         }
     }

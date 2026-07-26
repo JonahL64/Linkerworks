@@ -7,6 +7,7 @@ struct CalendarPlanView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CalendarEvent.date) private var events: [CalendarEvent]
     @Query private var assignments: [Assignment]
+    @Query private var dailyTodos: [DailyTodo]
     @Query private var certifications: [Certification]
     @AppStorage("homeworkIntegrationEnabled") private var homeworkIntegrationEnabled = true
 
@@ -18,6 +19,10 @@ struct CalendarPlanView: View {
 
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
+
+    private var todosByDayKey: [String: [DailyTodo]] {
+        Dictionary(grouping: dailyTodos, by: \.scheduledDayKey)
+    }
 
     private var weekdaySymbols: [String] {
         let symbols = calendar.veryShortWeekdaySymbols
@@ -62,6 +67,7 @@ struct CalendarPlanView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     HStack {
                         Button("Today") { selectToday() }
+                        NavigationLink("To-dos") { DailyTodosView(selectedDate: selectedDate) }
                         if homeworkIntegrationEnabled {
                             NavigationLink("Homework") { HomeworkView() }
                         }
@@ -152,7 +158,8 @@ struct CalendarPlanView: View {
                                 isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
                                 isToday: calendar.isDateInToday(date),
                                 hasEvents: !events(on: date).isEmpty,
-                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date).isEmpty
+                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date).isEmpty,
+                                hasTodos: !todos(on: date).isEmpty
                             )
                         }
                         .buttonStyle(.plain)
@@ -169,6 +176,7 @@ struct CalendarPlanView: View {
     private func agenda(for date: Date, showDateHeader: Bool) -> some View {
         let dailyEvents = events(on: date)
         let dailyAssignments = homeworkIntegrationEnabled ? assignments(on: date) : []
+        let dailyTodos = todos(on: date)
 
         VStack(alignment: .leading, spacing: LWSpace.xs) {
             if showDateHeader {
@@ -179,7 +187,7 @@ struct CalendarPlanView: View {
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                if dailyEvents.isEmpty && dailyAssignments.isEmpty {
+                if dailyEvents.isEmpty && dailyAssignments.isEmpty && dailyTodos.isEmpty {
                     Text("Nothing planned or due. Enjoy the space.")
                         .font(LWFont.callout)
                         .foregroundStyle(LWColor.inkSecondary)
@@ -205,6 +213,16 @@ struct CalendarPlanView: View {
                         if index > 0 || !dailyEvents.isEmpty { LWRowDivider() }
                         CalendarAssignmentRow(assignment: assignment)
                             .padding(.horizontal, LWSpace.md)
+                    }
+                    ForEach(Array(dailyTodos.enumerated()), id: \.element.id) { index, todo in
+                        if index > 0 || !dailyEvents.isEmpty || !dailyAssignments.isEmpty { LWRowDivider() }
+                        NavigationLink {
+                            DailyTodosView(selectedDate: date)
+                        } label: {
+                            CalendarDailyTodoRow(todo: todo)
+                                .padding(.horizontal, LWSpace.md)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -256,6 +274,12 @@ struct CalendarPlanView: View {
                     && $0.dueDate != HomeworkSupport.noDueDate
                     && calendar.isDate($0.dueDate, inSameDayAs: date)
             }
+        )
+    }
+
+    private func todos(on date: Date) -> [DailyTodo] {
+        DailyTodoSupport.ordered(
+            todosByDayKey[DailyTodoSupport.dayKey(for: date, calendar: calendar)] ?? []
         )
     }
 
@@ -350,6 +374,7 @@ private struct CalendarDayCell: View {
     let isToday: Bool
     let hasEvents: Bool
     let hasAssignments: Bool
+    let hasTodos: Bool
 
     var body: some View {
         VStack(spacing: LWSpace.xxs) {
@@ -365,6 +390,9 @@ private struct CalendarDayCell: View {
                 RoundedRectangle(cornerRadius: 1)
                     .fill(hasAssignments ? (isSelected ? LWColor.onAccent : LWColor.warning) : .clear)
                     .frame(width: 7, height: 3)
+                RoundedRectangle(cornerRadius: LWRadius.sm)
+                    .stroke(hasTodos ? (isSelected ? LWColor.onAccent : LWColor.inkSecondary) : .clear, lineWidth: LWStroke.emphasis)
+                    .frame(width: 5, height: 5)
             }
             .frame(height: 4)
         }
@@ -385,7 +413,11 @@ private struct CalendarDayCell: View {
         }
         .animation(LWMotion.toggle, value: isSelected)
         .accessibilityLabel(date.formatted(date: .long, time: .omitted))
-        .accessibilityValue(hasEvents || hasAssignments ? "\(hasEvents ? "Has events" : "")\(hasEvents && hasAssignments ? ", " : "")\(hasAssignments ? "Has assignments due" : "")" : "Nothing scheduled")
+        .accessibilityValue(
+            hasEvents || hasAssignments || hasTodos
+                ? "\(hasEvents ? "Has events" : "")\(hasEvents && (hasAssignments || hasTodos) ? ", " : "")\(hasAssignments ? "Has assignments due" : "")\(hasAssignments && hasTodos ? ", " : "")\(hasTodos ? "Has to-dos" : "")"
+                : "Nothing scheduled"
+        )
     }
 }
 
@@ -463,6 +495,34 @@ private struct CalendarAssignmentRow: View {
         .padding(.vertical, LWSpace.xs)
         .frame(minHeight: LWSpace.minTapTarget, alignment: .leading)
         .accessibilityLabel("Assignment due: \(assignment.title)")
+    }
+}
+
+private struct CalendarDailyTodoRow: View {
+    let todo: DailyTodo
+
+    var body: some View {
+        HStack(alignment: .top, spacing: LWSpace.sm) {
+            Text(todo.isCompleted ? "Done" : "To-do")
+                .font(LWFont.captionMedium)
+                .foregroundStyle(todo.isCompleted ? LWColor.success : LWColor.inkSecondary)
+                .frame(width: 76, alignment: .leading)
+
+            Rectangle()
+                .fill((todo.isCompleted ? LWColor.success : LWColor.inkSecondary).opacity(0.5))
+                .frame(width: 2)
+                .clipShape(Capsule())
+
+            Text(todo.title)
+                .font(LWFont.callout)
+                .foregroundStyle(todo.isCompleted ? LWColor.inkSecondary : LWColor.ink)
+                .strikethrough(todo.isCompleted, color: LWColor.inkTertiary)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, LWSpace.xs)
+        .frame(minHeight: LWSpace.minTapTarget, alignment: .leading)
+        .accessibilityLabel("To-do: \(todo.title), \(todo.isCompleted ? "completed" : "not completed")")
     }
 }
 

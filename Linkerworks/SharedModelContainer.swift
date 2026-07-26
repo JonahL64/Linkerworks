@@ -8,6 +8,7 @@ enum SharedModelContainer {
     static let schema = Schema([
         Course.self,
         Assignment.self,
+        DailyTodo.self,
         CalendarEvent.self,
         Certification.self,
         CertMilestone.self,
