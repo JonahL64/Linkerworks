@@ -1,6 +1,92 @@
 import Foundation
 import SwiftData
 
+/// A flexible portion of the day for routine tasks. Its stable identity is
+/// separate from the label a person chooses in Settings.
+enum RoutineDayPhase: String, CaseIterable, Codable, Identifiable, Sendable {
+    case anytime
+    case morning
+    case midday
+    case afternoon
+    case evening
+
+    var id: String { rawValue }
+
+    var sortRank: Int {
+        switch self {
+        case .morning: 0
+        case .midday: 1
+        case .afternoon: 2
+        case .evening: 3
+        case .anytime: 4
+        }
+    }
+
+    var defaultLabel: String { rawValue.capitalized }
+
+    static func inferred(legacyTime: String?, sectionName: String? = nil) -> RoutineDayPhase {
+        if let legacyTime, let minutes = legacyMinutes(legacyTime) {
+            switch minutes {
+            case ..<690: return .morning
+            case ..<870: return .midday
+            case ..<1080: return .afternoon
+            default: return .evening
+            }
+        }
+
+        let section = (sectionName ?? "").uppercased()
+        if section.contains("WAKE") || section.contains("MORNING") { return .morning }
+        if section.contains("MIDDAY") || section.contains("NOON") { return .midday }
+        if section.contains("AFTERNOON") { return .afternoon }
+        if section.contains("EVENING") || section.contains("BED") || section.contains("NIGHT") { return .evening }
+        return .anytime
+    }
+
+    private static func legacyMinutes(_ value: String) -> Int? {
+        let parts = value.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: ":")
+        guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]),
+              (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+        return hour * 60 + minute
+    }
+}
+
+enum RoutinePhasePreferences {
+    static func label(for phase: RoutineDayPhase, defaults: UserDefaults = sharedDefaults) -> String {
+        let value = defaults.string(forKey: labelKey(for: phase))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return value.isEmpty ? phase.defaultLabel : value
+    }
+
+    static func startGuidance(for phase: RoutineDayPhase, defaults: UserDefaults = sharedDefaults) -> String? {
+        guard phase != .anytime else { return nil }
+        let value = defaults.string(forKey: startKey(for: phase))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return value.isEmpty ? defaultStartGuidance(for: phase) : value
+    }
+
+    static func labelKey(for phase: RoutineDayPhase) -> String {
+        "routinePhase.\(phase.rawValue).label"
+    }
+
+    static func startKey(for phase: RoutineDayPhase) -> String {
+        "routinePhase.\(phase.rawValue).start"
+    }
+
+    static func defaultStartGuidance(for phase: RoutineDayPhase) -> String? {
+        switch phase {
+        case .anytime: nil
+        case .morning: "Wake"
+        case .midday: "11:30"
+        case .afternoon: "14:30"
+        case .evening: "18:00"
+        }
+    }
+
+    private static let sharedDefaults = UserDefaults(
+        suiteName: SharedModelContainer.appGroupIdentifier
+    ) ?? .standard
+}
+
 enum MealCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     case breakfast
     case lunch
@@ -136,6 +222,9 @@ final class TaskItem {
     @Attribute(.unique) var id: UUID
     var title: String
     var time: String?
+    /// Legacy-only storage retained for additive SwiftData migration. Routine
+    /// times are cleared on launch and are not used for new tasks.
+    var routinePhaseRawValue: String = "anytime"
     var detail: String
     var daysOfWeek: [String]
     var sortOrder: Int
@@ -153,10 +242,16 @@ final class TaskItem {
         set { domainRawValue = newValue.rawValue }
     }
 
+    var routinePhase: RoutineDayPhase {
+        get { RoutineDayPhase(rawValue: routinePhaseRawValue) ?? .anytime }
+        set { routinePhaseRawValue = newValue.rawValue }
+    }
+
     init(
         id: UUID = UUID(),
         title: String,
         time: String? = nil,
+        routinePhase: RoutineDayPhase = .anytime,
         detail: String,
         section: Section? = nil,
         daysOfWeek: [String],
@@ -170,6 +265,7 @@ final class TaskItem {
         self.id = id
         self.title = title
         self.time = time
+        self.routinePhaseRawValue = routinePhase.rawValue
         self.detail = detail
         self.section = section
         self.daysOfWeek = daysOfWeek

@@ -34,10 +34,13 @@ struct ManageView: View {
                 }
 
                 ForEach(orderedSections) { section in
-                    let tasks = tasks(in: section)
-                    if !tasks.isEmpty {
-                        SwiftUI.Section(sectionTitle(for: section)) {
-                            ForEach(tasks) { task in
+                    let sectionTasks = tasks(in: section)
+                    if !sectionTasks.isEmpty {
+                        ForEach(RoutineDayPhase.allCases) { phase in
+                            let phaseTasks = sectionTasks.filter { $0.routinePhase == phase }
+                            if !phaseTasks.isEmpty {
+                                SwiftUI.Section("\(sectionTitle(for: section)) · \(RoutinePhasePreferences.label(for: phase))") {
+                                    ForEach(phaseTasks) { task in
                                 Button {
                                     taskToEdit = task
                                 } label: {
@@ -58,8 +61,10 @@ struct ManageView: View {
                                     }
                                 }
                             }
-                            .onMove { source, destination in
-                                reorder(tasks, in: section, from: source, to: destination)
+                                    .onMove { source, destination in
+                                        reorder(phaseTasks, from: source, to: destination)
+                                    }
+                                }
                             }
                         }
                     }
@@ -118,9 +123,11 @@ struct ManageView: View {
                 $0.isArchived == showingArchived && !$0.isSubstep && $0.parent == nil
             }
             .sorted { lhs, rhs in
-                lhs.sortOrder == rhs.sortOrder
-                    ? lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
-                    : lhs.sortOrder < rhs.sortOrder
+                lhs.routinePhase.sortRank == rhs.routinePhase.sortRank
+                    ? (lhs.sortOrder == rhs.sortOrder
+                        ? lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+                        : lhs.sortOrder < rhs.sortOrder)
+                    : lhs.routinePhase.sortRank < rhs.routinePhase.sortRank
             }
     }
 
@@ -129,12 +136,7 @@ struct ManageView: View {
         return "\(weekday) · \(section.name)"
     }
 
-    private func reorder(
-        _ tasks: [TaskItem],
-        in section: Section,
-        from source: IndexSet,
-        to destination: Int
-    ) {
+    private func reorder(_ tasks: [TaskItem], from source: IndexSet, to destination: Int) {
         guard !showingArchived else { return }
 
         var reordered = tasks
@@ -163,6 +165,7 @@ struct ManageView: View {
             try modelContext.save()
             WidgetTimeline.reloadAll()
         } catch {
+            modelContext.rollback()
             saveErrorMessage = error.localizedDescription
         }
     }
@@ -174,12 +177,9 @@ private struct TaskSummaryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if let time = task.time, !time.isEmpty {
-                    Text(time)
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(TrainingLogTheme.secondaryText)
-                }
+                Text(RoutinePhasePreferences.label(for: task.routinePhase).uppercased())
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(TrainingLogTheme.secondaryText)
                 Text(task.title)
                     .foregroundStyle(TrainingLogTheme.primaryText)
             }
@@ -204,7 +204,7 @@ private struct TaskEditorView: View {
     let sections: [Section]
 
     @State private var title: String
-    @State private var time: String
+    @State private var routinePhase: RoutineDayPhase
     @State private var detail: String
     @State private var selectedSectionID: UUID?
     @State private var selectedDomain: Domain
@@ -222,7 +222,7 @@ private struct TaskEditorView: View {
         self.task = task
         self.sections = sections
         _title = State(initialValue: task?.title ?? "")
-        _time = State(initialValue: task?.time ?? "")
+        _routinePhase = State(initialValue: task?.routinePhase ?? .anytime)
         _detail = State(initialValue: task?.detail ?? "")
         _selectedSectionID = State(initialValue: task?.section?.id ?? sections.first?.id)
         let initialSection = task?.section ?? sections.first
@@ -258,6 +258,11 @@ private struct TaskEditorView: View {
                             Text(sectionLabel(for: section)).tag(Optional(section.id))
                         }
                     }
+                    Picker("Part of day", selection: $routinePhase) {
+                        ForEach(RoutineDayPhase.allCases) { phase in
+                            Text(RoutinePhasePreferences.label(for: phase)).tag(phase)
+                        }
+                    }
                 }
 
                 SwiftUI.Section {
@@ -286,8 +291,6 @@ private struct TaskEditorView: View {
 
                 SwiftUI.Section {
                     DisclosureGroup("Details") {
-                        TextField("Time (optional)", text: $time)
-                            .monospacedDigit()
                         TextField("Detail", text: $detail, axis: .vertical)
                             .lineLimit(2...5)
                         Picker("Domain", selection: $selectedDomain) {
@@ -356,8 +359,6 @@ private struct TaskEditorView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         TextField("Sub-step title", text: $substep.title)
                         DisclosureGroup("Details") {
-                            TextField("Time (optional)", text: $substep.time)
-                                .monospacedDigit()
                             TextField("Detail", text: $substep.detail, axis: .vertical)
                                 .lineLimit(1...3)
                         }
@@ -373,8 +374,6 @@ private struct TaskEditorView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     TextField("Sub-step title", text: $substep.title)
                     DisclosureGroup("Details") {
-                        TextField("Time (optional)", text: $substep.time)
-                            .monospacedDigit()
                         TextField("Detail", text: $substep.detail, axis: .vertical)
                             .lineLimit(1...3)
                     }
@@ -450,28 +449,30 @@ private struct TaskEditorView: View {
 
         if let task {
             let previousSection = task.section
+            let previousPhase = task.routinePhase
             task.title = cleanTitle
-            task.time = time.emptyToNil
+            task.time = nil
+            task.routinePhase = routinePhase
             task.detail = detail
             task.domain = selectedDomain
             // CompletionRecord values are intentionally not queried, edited, or deleted here.
             // Changing scheduled days applies only to future checklist occurrences.
             task.daysOfWeek = orderedDays
 
-            if task.section?.id != selectedSection.id {
+            if task.section?.id != selectedSection.id || previousPhase != routinePhase {
                 task.section = selectedSection
-                task.sortOrder = nextSortOrder(in: selectedSection)
+                task.sortOrder = nextSortOrder(in: selectedSection, phase: routinePhase)
                 normalizeSortOrders(in: previousSection)
             }
             savedTask = task
         } else {
             savedTask = TaskItem(
                 title: cleanTitle,
-                time: time.emptyToNil,
                 detail: detail,
                 daysOfWeek: orderedDays,
-                sortOrder: nextSortOrder(in: selectedSection),
-                domain: selectedDomain
+                sortOrder: nextSortOrder(in: selectedSection, phase: routinePhase),
+                domain: selectedDomain,
+                routinePhase: routinePhase
             )
             selectedSection.tasks.append(savedTask)
             modelContext.insert(savedTask)
@@ -482,7 +483,8 @@ private struct TaskEditorView: View {
                 continue
             }
             existingSubstep.title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            existingSubstep.time = draft.time.emptyToNil
+            existingSubstep.time = nil
+            existingSubstep.routinePhase = routinePhase
             existingSubstep.detail = draft.detail
             existingSubstep.daysOfWeek = orderedDays
             existingSubstep.isArchived = archivedExistingSubstepIDs.contains(draft.id)
@@ -497,12 +499,12 @@ private struct TaskEditorView: View {
 
             let substep = TaskItem(
                 title: cleanSubstepTitle,
-                time: draft.time.emptyToNil,
                 detail: draft.detail,
                 daysOfWeek: orderedDays,
                 sortOrder: nextSubstepSortOrder(in: savedTask),
                 domain: selectedDomain,
-                isSubstep: true
+                isSubstep: true,
+                routinePhase: routinePhase
             )
             savedTask.children.append(substep)
             modelContext.insert(substep)
@@ -513,6 +515,7 @@ private struct TaskEditorView: View {
             WidgetTimeline.reloadAll()
             dismiss()
         } catch {
+            modelContext.rollback()
             saveErrorMessage = error.localizedDescription
         }
     }
@@ -535,13 +538,14 @@ private struct TaskEditorView: View {
             WidgetTimeline.reloadAll()
             dismiss()
         } catch {
+            modelContext.rollback()
             saveErrorMessage = error.localizedDescription
         }
     }
 
-    private func nextSortOrder(in section: Section) -> Int {
+    private func nextSortOrder(in section: Section, phase: RoutineDayPhase) -> Int {
         (section.tasks
-            .filter { !$0.isSubstep && $0.parent == nil && !$0.isArchived }
+            .filter { !$0.isSubstep && $0.parent == nil && !$0.isArchived && $0.routinePhase == phase }
             .map(\.sortOrder)
             .max() ?? -1) + 1
     }
@@ -555,9 +559,11 @@ private struct TaskEditorView: View {
 
         let activeTasks = section.tasks
             .filter { !$0.isArchived && !$0.isSubstep && $0.parent == nil }
-            .sorted { $0.sortOrder < $1.sortOrder }
-        for (index, task) in activeTasks.enumerated() {
-            task.sortOrder = index
+            .sorted { $0.routinePhase.sortRank == $1.routinePhase.sortRank ? $0.sortOrder < $1.sortOrder : $0.routinePhase.sortRank < $1.routinePhase.sortRank }
+        for phase in RoutineDayPhase.allCases {
+            for (index, task) in activeTasks.filter({ $0.routinePhase == phase }).enumerated() {
+                task.sortOrder = index
+            }
         }
     }
 }
@@ -565,24 +571,15 @@ private struct TaskEditorView: View {
 private struct SubstepDraft: Identifiable {
     let id: UUID
     var title: String
-    var time: String
     var detail: String
 
-    init(id: UUID = UUID(), title: String = "", time: String = "", detail: String = "") {
+    init(id: UUID = UUID(), title: String = "", detail: String = "") {
         self.id = id
         self.title = title
-        self.time = time
         self.detail = detail
     }
 
     init(task: TaskItem) {
-        self.init(id: task.id, title: task.title, time: task.time ?? "", detail: task.detail)
-    }
-}
-
-private extension String {
-    var emptyToNil: String? {
-        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        self.init(id: task.id, title: task.title, detail: task.detail)
     }
 }

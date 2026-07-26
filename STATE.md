@@ -286,3 +286,11 @@ Validation passed: target-separated `swiftc -parse` and `git diff --check`; full
 
 Compile repair: `LinkerworksWidget/LinkerworksWidget.swift` now imports `AppIntents` for its interactive routine-completion widget buttons.
 This enables SwiftUI's `Button(intent:label:)` initializer; no widget action, data, or layout behavior changed.
+
+Flexible routine phases replaced regular routine clock times with Anytime, Morning, Midday, Afternoon, and Evening in `Linkerworks/Models.swift`.
+`Linkerworks/SeedImporter.swift` assigns phases for fresh seeds, while `RoutineDayPhaseMigration` runs once from `Linkerworks/LinkerworksApp.swift` to infer legacy task phases and clear only `TaskItem.time`; completion history, assignments, and calendar events are unchanged.
+`Linkerworks/ManageView.swift` now selects a part of day and keeps drag ordering local to that phase; added or phase-moved tasks append within the selected phase.
+`Linkerworks/ContentView.swift` and `LinkerworksWidget/LinkerworksWidget.swift` no longer show or order routine tasks by clock time.
+`Linkerworks/SettingsView.swift` lets the user customize phase names and start-time guidance, with validation; it does not create due dates or reminders.
+`LinkerworksTests/WidgetProjectionTests.swift` now covers phase ordering and valid/malformed legacy phase inference.
+Validation passed: target-separated Swift parse and `git diff --check`; full Xcode build, XCTest execution, migration, and UI interaction validation still require macOS Xcode or a Simulator.

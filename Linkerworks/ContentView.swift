@@ -173,39 +173,6 @@ private struct TodayView: View {
         workoutSessions.first { $0.state == .inProgress }
     }
 
-    private var visibleRenderedTasks: [TaskItem] {
-        todaySections.flatMap { section -> [TaskItem] in
-            guard !isSectionCollapsed(section) else { return [] }
-
-            return tasks(in: section).flatMap { task -> [TaskItem] in
-                guard !shouldHide(task) else { return [] }
-                let visibleChildren = expandedLiftParentIDs.contains(task.id)
-                    ? children(of: task).filter { !shouldHide($0) }
-                    : []
-                return [task] + visibleChildren
-            }
-        }
-    }
-
-    private var firstUpcomingVisibleTaskID: UUID? {
-        let visibleTasks = visibleRenderedTasks
-        guard let latestPastIndex = visibleTasks.lastIndex(where: {
-            scheduledDate(for: $0).map { $0 <= currentTime } ?? false
-        }) else {
-            return nil
-        }
-
-        let followingIndex = visibleTasks.index(after: latestPastIndex)
-        guard followingIndex < visibleTasks.endIndex,
-              let upcomingIndex = visibleTasks[followingIndex...].firstIndex(where: {
-                  scheduledDate(for: $0).map { $0 > currentTime } ?? false
-              }) else {
-            return nil
-        }
-
-        return visibleTasks[upcomingIndex].id
-    }
-
     var body: some View {
         NavigationStack {
             List {
@@ -289,25 +256,20 @@ private struct TodayView: View {
                     }
                 }
 
-                ForEach(todaySections) { section in
-                    SwiftUI.Section {
-                        if !isSectionCollapsed(section) {
-                            ForEach(tasks(in: section)) { task in
+                ForEach(RoutineDayPhase.allCases) { phase in
+                    ForEach(todaySections) { section in
+                        let phaseTasks = tasks(in: section).filter { $0.routinePhase == phase }
+                        if !phaseTasks.isEmpty {
+                            SwiftUI.Section {
+                                if !isSectionCollapsed(section) {
+                                    ForEach(phaseTasks) { task in
                                 if !shouldHide(task) {
-                                    if firstUpcomingVisibleTaskID == task.id {
-                                        nowDivider
-                                    }
-
                                     VStack(alignment: .leading, spacing: 8) {
                                         taskRow(task, isSubstep: false)
 
                                         if expandedLiftParentIDs.contains(task.id) {
                                             ForEach(children(of: task)) { child in
                                                 if !shouldHide(child) {
-                                                    if firstUpcomingVisibleTaskID == child.id {
-                                                        nowDivider
-                                                    }
-
                                                     taskRow(child, isSubstep: true)
                                                         .padding(.leading, 28)
                                                 }
@@ -316,10 +278,19 @@ private struct TodayView: View {
                                     }
                                     .padding(.vertical, 4)
                                 }
+                                    }
+                                }
+                            } header: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(RoutinePhasePreferences.label(for: phase))
+                                        .trainingLogSectionLabel()
+                                    Text(RoutinePhasePreferences.startGuidance(for: phase).map { "From \($0)" } ?? "Flexible")
+                                        .font(.caption)
+                                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                                    sectionHeader(section)
+                                }
                             }
                         }
-                    } header: {
-                        sectionHeader(section)
                     }
                 }
             }
@@ -476,9 +447,11 @@ private struct TodayView: View {
                     && $0.daysOfWeek.contains(todayWeekdayName)
             }
             .sorted { lhs, rhs in
-                lhs.sortOrder == rhs.sortOrder
-                    ? lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
-                    : lhs.sortOrder < rhs.sortOrder
+                lhs.routinePhase.sortRank == rhs.routinePhase.sortRank
+                    ? (lhs.sortOrder == rhs.sortOrder
+                        ? lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+                        : lhs.sortOrder < rhs.sortOrder)
+                    : lhs.routinePhase.sortRank < rhs.routinePhase.sortRank
             }
     }
 
@@ -610,13 +583,6 @@ private struct TodayView: View {
 
             Spacer(minLength: 12)
 
-            if let scheduledTime = scheduledTimeLabel(for: task) {
-                Text(scheduledTime)
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .foregroundStyle(TrainingLogTheme.secondaryText)
-                    .padding(.top, 1)
-            }
         }
 
         if isParentSummary {
@@ -817,28 +783,6 @@ private struct TodayView: View {
         return (try? modelContext.fetch(descriptor))?.filter {
             calendar.isDate($0.date, inSameDayAs: today) && $0.mealCategory == category
         } ?? []
-    }
-
-    private func scheduledDate(for task: TaskItem) -> Date? {
-        guard let rawValue = task.time?.trimmingCharacters(in: .whitespacesAndNewlines) else {
-            return nil
-        }
-        let parts = rawValue.split(separator: ":", omittingEmptySubsequences: false)
-        guard parts.count == 2,
-              parts.allSatisfy({ $0.count == 2 && $0.unicodeScalars.allSatisfy { (48...57).contains($0.value) } }),
-              let hour = Int(parts[0]),
-              let minute = Int(parts[1]),
-              (0...23).contains(hour),
-              (0...59).contains(minute) else {
-            return nil
-        }
-
-        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: today)
-    }
-
-    private func scheduledTimeLabel(for task: TaskItem) -> String? {
-        guard scheduledDate(for: task) != nil else { return nil }
-        return task.time?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func collapseFinishedSections() {

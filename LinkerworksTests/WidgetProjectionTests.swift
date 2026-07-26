@@ -4,17 +4,19 @@ import SwiftData
 
 @MainActor
 final class WidgetProjectionTests: XCTestCase {
-    func testNextTaskCharacterizationPutsOverdueBeforeUpcomingAndUntimed() {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let day = calendar.date(from: DateComponents(year: 2026, month: 7, day: 25))!
-        let now = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: day)!
-        let tasks = [
-            WidgetRoutineSortKey(timeText: nil, on: day, now: now, sectionOrder: 0, taskOrder: 0, title: "Untimed", calendar: calendar),
-            WidgetRoutineSortKey(timeText: "18:00", on: day, now: now, sectionOrder: 0, taskOrder: 1, title: "Future", calendar: calendar),
-            WidgetRoutineSortKey(timeText: "08:00", on: day, now: now, sectionOrder: 1, taskOrder: 0, title: "Overdue", calendar: calendar),
-        ]
-        XCTAssertEqual(tasks.sorted().map(\.title), ["Overdue", "Future", "Untimed"])
+    func testRoutinePhasesSortInPersonalDayOrder() {
+        XCTAssertEqual(
+            [RoutineDayPhase.anytime, .evening, .morning, .afternoon, .midday]
+                .sorted { $0.sortRank < $1.sortRank },
+            [.morning, .midday, .afternoon, .evening, .anytime]
+        )
+    }
+
+    func testLegacyRoutineTimeAndMalformedFallbackInferAFlexiblePhase() {
+        XCTAssertEqual(RoutineDayPhase.inferred(legacyTime: "07:00"), .morning)
+        XCTAssertEqual(RoutineDayPhase.inferred(legacyTime: "15:30"), .afternoon)
+        XCTAssertEqual(RoutineDayPhase.inferred(legacyTime: "bad", sectionName: "Evening reset"), .evening)
+        XCTAssertEqual(RoutineDayPhase.inferred(legacyTime: nil, sectionName: "Loose ends"), .anytime)
     }
 
     func testAssignmentSelectionKeepsNoDueDateOutOfDueProjection() {

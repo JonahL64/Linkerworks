@@ -12,42 +12,6 @@ enum WidgetTimeline {
     }
 }
 
-/// Stable projection ordering used by the widget and characterized in tests.
-struct WidgetRoutineSortKey: Comparable {
-    let category: Int
-    let time: Date?
-    let sectionOrder: Int
-    let taskOrder: Int
-    let title: String
-
-    init(timeText: String?, on date: Date, now: Date, sectionOrder: Int, taskOrder: Int, title: String, calendar: Calendar = .current) {
-        let parts = timeText?.split(separator: ":", omittingEmptySubsequences: false) ?? []
-        let hour = parts.count == 2 ? Int(parts[0]) : nil
-        let minute = parts.count == 2 ? Int(parts[1]) : nil
-        let parsed: Date?
-        if let hour, let minute,
-           (0...23).contains(hour),
-           (0...59).contains(minute) {
-            parsed = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date)
-        } else {
-            parsed = nil
-        }
-        time = parsed
-        category = parsed == nil ? 2 : (parsed! < now ? 0 : 1)
-        self.sectionOrder = sectionOrder
-        self.taskOrder = taskOrder
-        self.title = title
-    }
-
-    static func < (lhs: Self, rhs: Self) -> Bool {
-        if lhs.category != rhs.category { return lhs.category < rhs.category }
-        if let lhsTime = lhs.time, let rhsTime = rhs.time, lhsTime != rhsTime { return lhsTime < rhsTime }
-        if lhs.sectionOrder != rhs.sectionOrder { return lhs.sectionOrder < rhs.sectionOrder }
-        if lhs.taskOrder != rhs.taskOrder { return lhs.taskOrder < rhs.taskOrder }
-        return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
-    }
-}
-
 /// The only persistence mutation for a routine completion state. It is shared
 /// by Today and WidgetKit so child-derived lift completion never diverges.
 enum RoutineCompletionCommand {

@@ -10,6 +10,10 @@ struct LinkerworksApp: App {
             let container = try SharedModelContainer.make()
             let report = try SeedImporter.importIfNeeded(into: container.mainContext)
             let defaults = UserDefaults(suiteName: SharedModelContainer.appGroupIdentifier) ?? .standard
+            _ = try RoutineDayPhaseMigration.migrateIfNeeded(
+                in: container.mainContext,
+                defaults: defaults
+            )
             _ = try DaySnapshotService.backfillIfNeeded(
                 in: container.mainContext,
                 defaults: defaults

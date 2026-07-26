@@ -17,7 +17,6 @@ struct LinkerworksWidgetEntry: TimelineEntry {
     struct NextTask: Identifiable {
         let id: UUID
         let title: String
-        let time: String?
     }
     struct DueAssignment {
         let title: String
@@ -35,7 +34,7 @@ struct LinkerworksWidgetEntry: TimelineEntry {
     let loadState: LoadState
     var nextTask: NextTask? { tasks.first }
 
-    static let placeholder = LinkerworksWidgetEntry(date: .now, tasks: [NextTask(id: UUID(), title: "Mobility", time: "18:00")], completedCount: 14, scheduledCount: 22, isNeutralDay: false, assignment: DueAssignment(title: "Lab report", dueDate: .now, courseName: "Biology", courseColorHex: "#4FB3C4"), loadState: .loaded)
+    static let placeholder = LinkerworksWidgetEntry(date: .now, tasks: [NextTask(id: UUID(), title: "Mobility")], completedCount: 14, scheduledCount: 22, isNeutralDay: false, assignment: DueAssignment(title: "Lab report", dueDate: .now, courseName: "Biology", courseColorHex: "#4FB3C4"), loadState: .loaded)
     static func unavailable(at date: Date) -> Self { .init(date: date, tasks: [], completedCount: 0, scheduledCount: 0, isNeutralDay: false, assignment: nil, loadState: .unavailable) }
 }
 
@@ -64,13 +63,15 @@ struct LinkerworksWidgetProvider: TimelineProvider {
             }.sorted { taskOrder($0, $1, on: date) }
             let completion = HistoricalDayProgress.completion(scheduledTaskIDs: tasks.map(\.id), childTaskIDsByParent: DaySnapshotService.childTaskIDsByParent(for: tasks), records: records)
             let assignment = try context.fetch(FetchDescriptor<Assignment>()).filter { !$0.isDone && $0.dueDate != .distantFuture }.sorted { $0.dueDate < $1.dueDate }.first
-            return Entry(date: date, tasks: incomplete.prefix(3).map { .init(id: $0.id, title: $0.title, time: $0.time) }, completedCount: completion.completedCount, scheduledCount: completion.scheduledCount, isNeutralDay: completion.scheduledCount == 0, assignment: assignment.map { .init(title: $0.title, dueDate: $0.dueDate, courseName: $0.course?.name, courseColorHex: $0.course?.colorHex) }, loadState: .loaded)
+            return Entry(date: date, tasks: incomplete.prefix(3).map { .init(id: $0.id, title: $0.title) }, completedCount: completion.completedCount, scheduledCount: completion.scheduledCount, isNeutralDay: completion.scheduledCount == 0, assignment: assignment.map { .init(title: $0.title, dueDate: $0.dueDate, courseName: $0.course?.name, courseColorHex: $0.course?.colorHex) }, loadState: .loaded)
         } catch { return .unavailable(at: date) }
     }
 
     private func taskOrder(_ lhs: TaskItem, _ rhs: TaskItem, on date: Date) -> Bool {
-        WidgetRoutineSortKey(timeText: lhs.time, on: date, now: date, sectionOrder: lhs.section?.sortOrder ?? .max, taskOrder: lhs.sortOrder, title: lhs.title)
-            < WidgetRoutineSortKey(timeText: rhs.time, on: date, now: date, sectionOrder: rhs.section?.sortOrder ?? .max, taskOrder: rhs.sortOrder, title: rhs.title)
+        if lhs.routinePhase.sortRank != rhs.routinePhase.sortRank { return lhs.routinePhase.sortRank < rhs.routinePhase.sortRank }
+        if lhs.section?.sortOrder != rhs.section?.sortOrder { return (lhs.section?.sortOrder ?? .max) < (rhs.section?.sortOrder ?? .max) }
+        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+        return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
     }
     private func nextRefresh(after date: Date) -> Date { min(Calendar.current.date(byAdding: .hour, value: 1, to: date) ?? date.addingTimeInterval(3600), Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: date)) ?? date.addingTimeInterval(3600)) }
 }
@@ -80,8 +81,8 @@ struct LinkerworksWidgetEntryView: View {
     let entry: LinkerworksWidgetEntry
     var body: some View { Group { switch family { case .accessoryCircular: circular; case .accessoryRectangular: rectangular; case .systemMedium: medium; default: small } }.widgetURL(todayDeepLink).foregroundStyle(WidgetTheme.primaryText).containerBackground(WidgetTheme.background, for: .widget) }
     private var small: some View { VStack(alignment: .leading, spacing: 6) { Text("NEXT").font(.caption.weight(.semibold)).foregroundStyle(WidgetTheme.secondaryText); content(task: entry.nextTask) }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading) }
-    private var medium: some View { HStack(spacing: 14) { ProgressView(value: Double(entry.completedCount), total: Double(max(entry.scheduledCount, 1))).tint(WidgetTheme.completionAccent).frame(width: 52).overlay { Text("\(entry.completedCount)/\(entry.scheduledCount)").font(.caption2).monospacedDigit() }; VStack(alignment: .leading, spacing: 5) { Text("NEXT").font(.caption.weight(.semibold)).foregroundStyle(WidgetTheme.secondaryText); if entry.loadState == .loaded { ForEach(entry.tasks) { task in Button(intent: CompleteRoutineTaskIntent(taskID: task.id.uuidString)) { HStack { Image(systemName: "circle"); Text(task.title).lineLimit(1); Spacer(); if let time = task.time { Text(time).monospacedDigit().foregroundStyle(WidgetTheme.secondaryText) } } }.buttonStyle(.plain) } } else { Text("Open Linkerworks to load today").font(.caption) } } }.frame(maxWidth: .infinity, maxHeight: .infinity) }
-    @ViewBuilder private func content(task: LinkerworksWidgetEntry.NextTask?) -> some View { if entry.loadState == .unavailable { Text("Open Linkerworks to load today").font(.caption).foregroundStyle(WidgetTheme.secondaryText) } else if let task { Button(intent: CompleteRoutineTaskIntent(taskID: task.id.uuidString)) { VStack(alignment: .leading) { Text(task.title).font(.headline.weight(.semibold)).lineLimit(2); if let time = task.time { Text(time).font(.caption).monospacedDigit().foregroundStyle(WidgetTheme.secondaryText) } } }.buttonStyle(.plain) } else if entry.isNeutralDay { Label("No tasks to count", systemImage: "minus.circle.fill").font(.subheadline) } else { Label("Day complete", systemImage: "checkmark.circle.fill").foregroundStyle(WidgetTheme.completionAccent) } }
+    private var medium: some View { HStack(spacing: 14) { ProgressView(value: Double(entry.completedCount), total: Double(max(entry.scheduledCount, 1))).tint(WidgetTheme.completionAccent).frame(width: 52).overlay { Text("\(entry.completedCount)/\(entry.scheduledCount)").font(.caption2).monospacedDigit() }; VStack(alignment: .leading, spacing: 5) { Text("NEXT").font(.caption.weight(.semibold)).foregroundStyle(WidgetTheme.secondaryText); if entry.loadState == .loaded { ForEach(entry.tasks) { task in Button(intent: CompleteRoutineTaskIntent(taskID: task.id.uuidString)) { HStack { Image(systemName: "circle"); Text(task.title).lineLimit(1); Spacer() } }.buttonStyle(.plain) } } else { Text("Open Linkerworks to load today").font(.caption) } } }.frame(maxWidth: .infinity, maxHeight: .infinity) }
+    @ViewBuilder private func content(task: LinkerworksWidgetEntry.NextTask?) -> some View { if entry.loadState == .unavailable { Text("Open Linkerworks to load today").font(.caption).foregroundStyle(WidgetTheme.secondaryText) } else if let task { Button(intent: CompleteRoutineTaskIntent(taskID: task.id.uuidString)) { VStack(alignment: .leading) { Text(task.title).font(.headline.weight(.semibold)).lineLimit(2) }.buttonStyle(.plain) } } else if entry.isNeutralDay { Label("No tasks to count", systemImage: "minus.circle.fill").font(.subheadline) } else { Label("Day complete", systemImage: "checkmark.circle.fill").foregroundStyle(WidgetTheme.completionAccent) } }
     private var circular: some View { Group { if entry.loadState == .unavailable { Image(systemName: "exclamationmark") } else if let task = entry.nextTask { Text(task.title).font(.system(size: 10)).lineLimit(2).minimumScaleFactor(0.35) } else { Image(systemName: entry.isNeutralDay ? "minus" : "checkmark") } }.widgetAccentable() }
     private var rectangular: some View { VStack(alignment: .leading, spacing: 2) { if entry.loadState == .unavailable { Label("Open Linkerworks", systemImage: "exclamationmark.circle") } else if let task = entry.nextTask { Text("\(entry.completedCount)/\(entry.scheduledCount) · Next: \(task.title)").font(.caption).lineLimit(1) } else { Text(entry.isNeutralDay ? "No tasks to count" : "Day complete").font(.caption) } }.frame(maxWidth: .infinity, alignment: .leading) }
 }

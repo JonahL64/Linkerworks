@@ -83,7 +83,10 @@ enum SeedImporter {
 
                         let child = TaskItem(
                             title: seedTask.title.trimmingCharacters(in: .whitespaces),
-                            time: seedTask.time,
+                            routinePhase: RoutineDayPhase.inferred(
+                                legacyTime: seedTask.time,
+                                sectionName: seedSection.name
+                            ),
                             detail: seedTask.detail,
                             daysOfWeek: [weekdayName],
                             sortOrder: childSortOrder,
@@ -98,7 +101,10 @@ enum SeedImporter {
 
                     let task = TaskItem(
                         title: seedTask.title,
-                        time: seedTask.time,
+                        routinePhase: RoutineDayPhase.inferred(
+                            legacyTime: seedTask.time,
+                            sectionName: seedSection.name
+                        ),
                         detail: seedTask.detail,
                         daysOfWeek: [weekdayName],
                         sortOrder: taskIndex,
@@ -216,6 +222,36 @@ enum SeedImporter {
         case "Brushing", "Skincare", "Shaving", "Small grooming": .grooming
         default: nil
         }
+    }
+}
+
+/// One-time, additive migration for installations that imported the original
+/// clock-based routine. It deliberately touches only TaskItem routine fields;
+/// completion records, assignments, and calendar events are left intact.
+enum RoutineDayPhaseMigration {
+    static let version = 1
+    static let versionKey = "routineDayPhaseMigrationVersion"
+
+    @discardableResult
+    static func migrateIfNeeded(
+        in context: ModelContext,
+        defaults: UserDefaults
+    ) throws -> Bool {
+        guard defaults.integer(forKey: versionKey) < version else { return false }
+
+        let tasks = try context.fetch(FetchDescriptor<TaskItem>())
+        for task in tasks {
+            if task.routinePhase == .anytime {
+                task.routinePhase = RoutineDayPhase.inferred(
+                    legacyTime: task.time,
+                    sectionName: task.section?.name
+                )
+            }
+            task.time = nil
+        }
+        try context.save()
+        defaults.set(version, forKey: versionKey)
+        return true
     }
 }
 
