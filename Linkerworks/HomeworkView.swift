@@ -85,7 +85,7 @@ struct HomeworkView: View {
     var body: some View {
         List {
             if !courses.filter({ !$0.isArchived }).isEmpty {
-                Section {
+                SwiftUI.Section {
                     courseFilters
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(TrainingLogTheme.background)
@@ -309,7 +309,7 @@ private struct AssignmentEditorView: View {
         let item = assignment ?? Assignment(title: cleanTitle, dueDate: finalDate, sortOrder: (courses.flatMap(\.assignments).map(\.sortOrder).max() ?? -1) + 1)
         item.title = cleanTitle; item.course = course; item.dueDate = finalDate; item.usesDefaultTime = usesDefaultTime; item.notes = notes.isEmpty ? nil : notes; item.updatedAt = Date()
         if assignment == nil { modelContext.insert(item) }
-        do { try modelContext.save(); dismiss() } catch { error = error.localizedDescription }
+        do { try modelContext.save(); dismiss() } catch let saveFailure { error = saveFailure.localizedDescription }
     }
 }
 
@@ -364,7 +364,7 @@ private struct CourseEditorView: View {
     private let palette = ["#D9A441", "#4FB3C4", "#8E7BD1", "#D9705C", "#6E8BA8", "#C46A8E", "#B8A184", "#7F8A93"]
     init(course: Course?) { self.course = course; _name = State(initialValue: course?.name ?? ""); _term = State(initialValue: course?.term ?? ""); _colorHex = State(initialValue: course?.colorHex ?? "#D9A441") }
     var body: some View { NavigationStack { Form { SwiftUI.Section("Course") { TextField("Course name", text: $name); TextField("Term", text: $term); Picker("Color", selection: $colorHex) { ForEach(palette, id: \.self) { hex in HStack { Circle().fill(Color(hex: hex)).frame(width: 12, height: 12); Text(hex) }.tag(hex) } } } }.trainingLogForm().navigationTitle(course == nil ? "Add Course" : "Edit Course").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }; ToolbarItem(placement: .confirmationAction) { Button("Save") { save() } } }.alert("Check Course", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(error ?? "") } }.trainingLogNavigation() }
-    private func save() { let clean = name.trimmingCharacters(in: .whitespacesAndNewlines); guard !clean.isEmpty else { error = "Enter a course name."; return }; let item = course ?? Course(name: clean, colorHex: colorHex, term: term, sortOrder: (courses.map(\.sortOrder).max() ?? -1) + 1); item.name = clean; item.term = term; item.colorHex = colorHex; if course == nil { modelContext.insert(item) }; do { try modelContext.save(); dismiss() } catch { error = error.localizedDescription } }
+    private func save() { let clean = name.trimmingCharacters(in: .whitespacesAndNewlines); guard !clean.isEmpty else { error = "Enter a course name."; return }; let item = course ?? Course(name: clean, colorHex: colorHex, term: term, sortOrder: (courses.map(\.sortOrder).max() ?? -1) + 1); item.name = clean; item.term = term; item.colorHex = colorHex; if course == nil { modelContext.insert(item) }; do { try modelContext.save(); dismiss() } catch let saveFailure { error = saveFailure.localizedDescription } }
 }
 
 private extension Course { var color: Color { Color(hex: colorHex) } }
