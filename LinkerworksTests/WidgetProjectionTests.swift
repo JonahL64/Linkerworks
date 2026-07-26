@@ -4,6 +4,54 @@ import SwiftData
 
 @MainActor
 final class WidgetProjectionTests: XCTestCase {
+    func testRoutineDaySelectionProjectsTheSharedSelectedDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let defaults = UserDefaults(suiteName: "WidgetProjectionTests.\(UUID().uuidString)")!
+        let selectedDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 20))!
+        let widgetRefreshDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 21, hour: 3))!
+
+        RoutineDaySelection.select(selectedDay, defaults: defaults, calendar: calendar)
+
+        XCTAssertEqual(
+            RoutineDaySelection.selectedDay(now: widgetRefreshDay, defaults: defaults, calendar: calendar),
+            selectedDay
+        )
+        XCTAssertTrue(
+            RoutineDaySelection.needsRolloverConfirmation(
+                now: widgetRefreshDay,
+                defaults: defaults,
+                calendar: calendar
+            )
+        )
+    }
+
+    func testSelectedRoutineDayDrivesIntentStyleCompletion() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let defaults = UserDefaults(suiteName: "WidgetProjectionCompletionTests.\(UUID().uuidString)")!
+        let selectedDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 25))!
+        let container = try ModelContainer(
+            for: SharedModelContainer.schema,
+            configurations: [ModelConfiguration(isStoredInMemoryOnly: true)]
+        )
+        let context = container.mainContext
+        let task = TaskItem(title: "Mobility", detail: "", daysOfWeek: ["Saturday"], sortOrder: 0, domain: .posture)
+        context.insert(task)
+        try context.save()
+        RoutineDaySelection.select(selectedDay, defaults: defaults, calendar: calendar)
+
+        try RoutineCompletionCommand.complete(
+            taskID: task.id,
+            in: context,
+            routineDayDefaults: defaults,
+            calendar: calendar
+        )
+
+        let record = try XCTUnwrap(try context.fetch(FetchDescriptor<CompletionRecord>()).first)
+        XCTAssertEqual(record.date, selectedDay)
+    }
+
     func testRoutinePhasesSortInPersonalDayOrder() {
         XCTAssertEqual(
             [RoutineDayPhase.anytime, .evening, .morning, .afternoon, .midday]

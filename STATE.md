@@ -235,6 +235,15 @@ Routine task progress, snapshots, streaks, and heatmap behavior remain unchanged
 Full Xcode build and interaction verification are still required because this Windows host lacks Swift tooling.
 `HomeworkCoreTests` now toggles `homeworkIntegrationEnabled` both off and on and asserts byte-identical routine completion output in each case; this covers the same routine-only input used by snapshots, streaks, and heatmap.
 
+Daily routine rollover update changed `Linkerworks/Domain.swift`, `Linkerworks/ContentView.swift`, and the widget/AppIntent sources; the selected routine day is persisted in the shared App Group defaults for app/widget parity.
+Today now asks after midnight before advancing an existing prior routine day, supports keeping it without repeat prompts that calendar day, and provides a visible later “Start [day]” action.
+Goalkeeping can be set to a selected-day Rest day; it writes tracked date-specific skipped completion units, hides its routine rows, excludes them from progress, and non-destructively restores prior complete/manual-skip state when resumed.
+The routine widget reads/completes against the shared selected day; small, medium, lock-screen, and assignment views use private Paper & Ink surface, ink, type, spacing, and progress equivalents.
+`SurfaceRaised`, `SurfaceSunken`, and `Hairline` adaptive colors were duplicated in both asset catalogues for the widget’s raised hierarchy.
+Focused rollover, rest-day, completion-preservation, and selected-day projection coverage was added to `HistoricalProgressTests.swift` and `WidgetProjectionTests.swift`.
+Validation passed: `swiftc -parse Linkerworks/*.swift LinkerworksWidget/*.swift LinkerworksTests/*.swift` and `git diff --check`.
+Full Xcode build, SwiftData migration/runtime behavior, actual widget rendering, and device rollover interaction still need Xcode or a device; this machine has Command Line Tools only.
+
 Sprint 5 Certifications added `.certifications` to `Linkerworks/Domain.swift`; CaseIterable now carries it through Manage Routine and Log without picker/list special cases.
 `Linkerworks/Models.swift` defines additive SwiftData `Certification` and cascade-owned `CertMilestone` models, registered in the shared App Group schema by `Linkerworks/SharedModelContainer.swift`.
 `Linkerworks/CertificationViews.swift` composes certificate rows above the un-forked `DomainTrackerView` body, with status/dates/notes, ordered milestones, linked Certifications-domain routine tasks, and a trailing-30-day complete-record count.

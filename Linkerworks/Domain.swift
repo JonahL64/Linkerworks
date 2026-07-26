@@ -12,6 +12,67 @@ enum WidgetTimeline {
     }
 }
 
+/// The routine date is intentionally shared outside SwiftData so the app and
+/// WidgetKit extension keep the same late-night working context. It is a
+/// temporary selection, never a rewrite of dates stored in completion history.
+enum RoutineDaySelection {
+    static let selectedDayKey = "selectedRoutineDay"
+    static let rolloverPromptDayKey = "routineDayRolloverPromptDay"
+
+    static func selectedDay(
+        now: Date = .now,
+        defaults: UserDefaults? = sharedDefaults,
+        calendar: Calendar = .current
+    ) -> Date {
+        guard let value = defaults?.string(forKey: selectedDayKey),
+              let storedDay = DaySnapshotService.date(for: value, calendar: calendar) else {
+            return calendar.startOfDay(for: now)
+        }
+        return calendar.startOfDay(for: storedDay)
+    }
+
+    static func hasSavedSelection(defaults: UserDefaults? = sharedDefaults) -> Bool {
+        defaults?.string(forKey: selectedDayKey) != nil
+    }
+
+    static func select(
+        _ date: Date,
+        defaults: UserDefaults? = sharedDefaults,
+        calendar: Calendar = .current
+    ) {
+        defaults?.set(DaySnapshotService.dayKey(for: date, calendar: calendar), forKey: selectedDayKey)
+    }
+
+    static func needsRolloverConfirmation(
+        now: Date = .now,
+        defaults: UserDefaults? = sharedDefaults,
+        calendar: Calendar = .current
+    ) -> Bool {
+        guard defaults?.string(forKey: selectedDayKey) != nil else { return false }
+        let selected = selectedDay(now: now, defaults: defaults, calendar: calendar)
+        let calendarDay = calendar.startOfDay(for: now)
+        guard selected < calendarDay else { return false }
+        return defaults?.string(forKey: rolloverPromptDayKey) != DaySnapshotService.dayKey(for: calendarDay, calendar: calendar)
+    }
+
+    /// Suppresses repeat prompting only for the present calendar day. A later
+    /// date always gets a fresh explicit decision.
+    static func deferRollover(
+        for calendarDay: Date,
+        defaults: UserDefaults? = sharedDefaults,
+        calendar: Calendar = .current
+    ) {
+        defaults?.set(
+            DaySnapshotService.dayKey(for: calendarDay, calendar: calendar),
+            forKey: rolloverPromptDayKey
+        )
+    }
+
+    private static let sharedDefaults = UserDefaults(
+        suiteName: SharedModelContainer.appGroupIdentifier
+    )
+}
+
 /// The only persistence mutation for a routine completion state. It is shared
 /// by Today and WidgetKit so child-derived lift completion never diverges.
 enum RoutineCompletionCommand {
@@ -41,31 +102,44 @@ enum RoutineCompletionCommand {
     /// active children write child records, exactly as Today's parent control.
     static func complete(
         taskID: UUID,
-        at date: Date = .now,
+        at date: Date? = nil,
         in context: ModelContext,
+        routineDayDefaults: UserDefaults? = nil,
         calendar: Calendar = .current
     ) throws {
+        let completionDate: Date
+        if let date {
+            completionDate = date
+        } else if let routineDayDefaults {
+            completionDate = RoutineDaySelection.selectedDay(
+                defaults: routineDayDefaults,
+                calendar: calendar
+            )
+        } else {
+            completionDate = RoutineDaySelection.selectedDay(calendar: calendar)
+        }
         let tasks = try context.fetch(FetchDescriptor<TaskItem>())
         guard let task = tasks.first(where: { $0.id == taskID && !$0.isArchived }) else {
             throw RoutineCompletionError.taskUnavailable
         }
         let weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-        let weekdayIndex = calendar.component(.weekday, from: date) - 1
+        let weekdayIndex = calendar.component(.weekday, from: completionDate) - 1
         guard weekdayNames.indices.contains(weekdayIndex), task.daysOfWeek.contains(weekdayNames[weekdayIndex]) else {
             throw RoutineCompletionError.taskUnavailable
         }
         let children = task.children.filter { !$0.isArchived }
         let recordIDs = children.isEmpty ? Set([task.id]) : Set(children.map(\.id))
         let affectedIDs = recordIDs.union([task.id])
-        try apply(taskIDs: affectedIDs, recordTaskIDs: recordIDs, date: date, state: .complete, in: context)
+        try apply(taskIDs: affectedIDs, recordTaskIDs: recordIDs, date: completionDate, state: .complete, in: context)
     }
+
 }
 
 enum RoutineCompletionError: LocalizedError {
     case taskUnavailable
 
     var errorDescription: String? {
-        "This task is no longer available for today."
+        "This task is no longer available for the selected routine day."
     }
 }
 
@@ -119,6 +193,118 @@ enum TaskCompletion {
         }
         return completedTaskIDs.contains(task.id)
     }
+}
+
+/// Date-specific Goalkeeping rest-day support. The returned IDs match the
+/// completion units used by progress: a lift-style parent contributes children,
+/// while ordinary tasks contribute their own record ID.
+enum GoalkeepingRestDay {
+    private struct StoredState: Codable {
+        var isActive: Bool
+        var recordIDs: [UUID]
+    }
+
+    private static let stateKeyPrefix = "goalkeepingRestDay."
+
+    static func scheduledTasks(from tasks: [TaskItem]) -> [TaskItem] {
+        tasks.filter { $0.domain == .goalkeeping }
+    }
+
+    static func completionUnitTaskIDs(for tasks: [TaskItem]) -> Set<UUID> {
+        Set(tasks.flatMap { task in
+            let children = task.children.filter { !$0.isArchived }
+            return children.isEmpty ? [task.id] : children.map(\.id)
+        })
+    }
+
+    static func isRestDay(
+        tasks: [TaskItem],
+        date: Date,
+        defaults: UserDefaults? = sharedDefaults,
+        calendar: Calendar = .current
+    ) -> Bool {
+        guard !completionUnitTaskIDs(for: tasks).isEmpty else { return false }
+        return storedState(for: date, defaults: defaults, calendar: calendar)?.isActive == true
+    }
+
+    static func setRestDay(
+        _ isRestDay: Bool,
+        tasks: [TaskItem],
+        date: Date,
+        in context: ModelContext,
+        defaults: UserDefaults? = sharedDefaults,
+        calendar: Calendar = .current
+    ) throws {
+        let taskIDs = completionUnitTaskIDs(for: tasks)
+        guard !taskIDs.isEmpty else { return }
+        let start = calendar.startOfDay(for: date)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return }
+
+        var stored = storedState(for: date, defaults: defaults, calendar: calendar)
+            ?? StoredState(isActive: false, recordIDs: [])
+
+        guard isRestDay else {
+            stored.isActive = false
+            save(stored, for: date, defaults: defaults, calendar: calendar)
+            WidgetTimeline.reloadAll()
+            return
+        }
+
+        _ = try DaySnapshotService.captureIfNeeded(for: date, in: context, calendar: calendar)
+        let records = try context.fetch(FetchDescriptor<CompletionRecord>(predicate: #Predicate {
+            $0.date >= start && $0.date < end
+        }))
+        let states = HistoricalDayProgress.stateByTaskID(
+            records,
+            ignoredRecordIDs: Set(stored.recordIDs)
+        )
+        for taskID in taskIDs where states[taskID] != .skipped {
+            let record = CompletionRecord(date: date, taskId: taskID, state: .skipped)
+            context.insert(record)
+            stored.recordIDs.append(record.id)
+        }
+        stored.isActive = true
+        try context.save()
+        save(stored, for: date, defaults: defaults, calendar: calendar)
+        WidgetTimeline.reloadAll()
+    }
+
+    static func ignoredRecordIDs(defaults: UserDefaults? = sharedDefaults) -> Set<UUID> {
+        guard let defaults else { return [] }
+        let states = defaults.dictionaryRepresentation().compactMap { entry -> StoredState? in
+            guard entry.key.hasPrefix(stateKeyPrefix),
+                  let data = entry.value as? Data else { return nil }
+            return try? JSONDecoder().decode(StoredState.self, from: data)
+        }
+        return Set(states.filter { !$0.isActive }.flatMap(\.recordIDs))
+    }
+
+    private static func storedState(
+        for date: Date,
+        defaults: UserDefaults?,
+        calendar: Calendar
+    ) -> StoredState? {
+        guard let data = defaults?.data(forKey: stateKey(for: date, calendar: calendar)) else { return nil }
+        return try? JSONDecoder().decode(StoredState.self, from: data)
+    }
+
+    private static func save(
+        _ state: StoredState,
+        for date: Date,
+        defaults: UserDefaults?,
+        calendar: Calendar
+    ) {
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        defaults?.set(data, forKey: stateKey(for: date, calendar: calendar))
+    }
+
+    private static func stateKey(for date: Date, calendar: Calendar) -> String {
+        stateKeyPrefix + DaySnapshotService.dayKey(for: date, calendar: calendar)
+    }
+
+    private static let sharedDefaults = UserDefaults(
+        suiteName: SharedModelContainer.appGroupIdentifier
+    )
 }
 
 struct ProgressDayCompletion: Equatable {
@@ -190,8 +376,12 @@ enum HistoricalDayProgress {
         )
     }
 
-    static func stateByTaskID(_ records: [CompletionRecord]) -> [UUID: CompletionRecordState] {
+    static func stateByTaskID(
+        _ records: [CompletionRecord],
+        ignoredRecordIDs: Set<UUID> = GoalkeepingRestDay.ignoredRecordIDs()
+    ) -> [UUID: CompletionRecordState] {
         records
+            .filter { !ignoredRecordIDs.contains($0.id) }
             .sorted {
                 $0.completedAt == $1.completedAt
                     ? $0.id.uuidString < $1.id.uuidString

@@ -73,11 +73,22 @@ private struct TodayView: View {
     @State private var isSavingCompletion = false
     @State private var currentTime = Date()
     @State private var favoriteAwaitingCategory: SavedMeal?
+    @State private var routineDay = RoutineDaySelection.selectedDay()
+    @State private var showingRolloverConfirmation = false
+    @State private var goalkeepingRestDayRevision = 0
 
     private let calendar = Calendar.current
 
     private var today: Date {
+        calendar.startOfDay(for: routineDay)
+    }
+
+    private var calendarDay: Date {
         calendar.startOfDay(for: currentTime)
+    }
+
+    private var isHoldingPriorRoutineDay: Bool {
+        today < calendarDay
     }
 
     private var todaySchedule: DaySchedule? {
@@ -108,30 +119,43 @@ private struct TodayView: View {
         todaySections.flatMap { tasks(in: $0) }
     }
 
+    private var scheduledGoalkeepingTasks: [TaskItem] {
+        GoalkeepingRestDay.scheduledTasks(
+            from: daySchedules.flatMap(\.sections).flatMap { baseTasks(in: $0) }
+        )
+    }
+
+    private var isGoalkeepingRestDay: Bool {
+        _ = goalkeepingRestDayRevision
+        return GoalkeepingRestDay.isRestDay(
+            tasks: scheduledGoalkeepingTasks,
+            date: today,
+            calendar: calendar
+        )
+    }
+
     private var completedTaskIDs: Set<UUID> {
         Set(
-            completionRecords
-                .filter {
-                    calendar.isDate($0.date, inSameDayAs: today)
-                        && $0.state == .complete
-                }
+            todayRecords
+                .filter { $0.state == .complete }
                 .map(\.taskId)
         )
     }
 
     private var skippedTaskIDs: Set<UUID> {
         Set(
-            completionRecords
-                .filter {
-                    calendar.isDate($0.date, inSameDayAs: today)
-                        && $0.state == .skipped
-                }
+            todayRecords
+                .filter { $0.state == .skipped }
                 .map(\.taskId)
         )
     }
 
     private var todayRecords: [CompletionRecord] {
-        completionRecords.filter { calendar.isDate($0.date, inSameDayAs: today) }
+        let ignoredRecordIDs = GoalkeepingRestDay.ignoredRecordIDs()
+        return completionRecords.filter {
+            calendar.isDate($0.date, inSameDayAs: today)
+                && !ignoredRecordIDs.contains($0.id)
+        }
     }
 
     private var todayProgressCompletion: ProgressDayCompletion {
@@ -155,7 +179,7 @@ private struct TodayView: View {
         HomeworkSupport.ordered(assignments.filter {
             !$0.isDone
                 && $0.dueDate != HomeworkSupport.noDueDate
-                && calendar.isDate($0.dueDate, inSameDayAs: today)
+                && calendar.isDate($0.dueDate, inSameDayAs: calendarDay)
         })
     }
 
@@ -163,7 +187,7 @@ private struct TodayView: View {
         assignments.filter {
             !$0.isDone
                 && $0.dueDate != HomeworkSupport.noDueDate
-                && calendar.startOfDay(for: $0.dueDate) < today
+                && calendar.startOfDay(for: $0.dueDate) < calendarDay
         }.count
     }
 
@@ -223,6 +247,23 @@ private struct TodayView: View {
                 }
                 Button("Cancel", role: .cancel) { favoriteAwaitingCategory = nil }
             }
+            .confirmationDialog(
+                "Are you on the next day?",
+                isPresented: $showingRolloverConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Keep working on \(today.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))") {
+                    deferRollover()
+                }
+                Button("Start \(calendarDay.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))") {
+                    startCalendarDay()
+                }
+                Button("Cancel", role: .cancel) {
+                    deferRollover()
+                }
+            } message: {
+                Text("Your routine is still set to \(today.formatted(.dateTime.weekday(.wide).month(.wide).day())).")
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
@@ -280,8 +321,13 @@ private struct TodayView: View {
                 }
             }
             .onAppear {
+                routineDay = RoutineDaySelection.selectedDay(now: currentTime, calendar: calendar)
+                if !RoutineDaySelection.hasSavedSelection() {
+                    RoutineDaySelection.select(routineDay, calendar: calendar)
+                }
                 _ = captureTodayIfNeeded()
                 collapseFinishedPhases()
+                updateRolloverConfirmation()
             }
             .onChange(of: completedTaskIDs) { _, _ in
                 collapseFinishedPhases()
@@ -292,6 +338,9 @@ private struct TodayView: View {
                 expandedLiftParentIDs.removeAll()
                 _ = captureTodayIfNeeded()
                 collapseFinishedPhases()
+            }
+            .onChange(of: currentTime) { _, _ in
+                updateRolloverConfirmation()
             }
             .task {
                 while !Task.isCancelled {
@@ -363,6 +412,49 @@ private struct TodayView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Next up: \(nextTask.title)")
+            }
+
+            if isHoldingPriorRoutineDay {
+                Divider().overlay(LWColor.hairline)
+
+                Button {
+                    startCalendarDay()
+                } label: {
+                    Label(
+                        "Start \(calendarDay.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))",
+                        systemImage: "arrow.right.circle"
+                    )
+                    .font(LWFont.calloutMedium)
+                    .foregroundStyle(LWColor.accent)
+                    .frame(minHeight: LWSpace.minTapTarget, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if !scheduledGoalkeepingTasks.isEmpty {
+                Divider().overlay(LWColor.hairline)
+
+                HStack(spacing: LWSpace.sm) {
+                    VStack(alignment: .leading, spacing: LWSpace.xxs) {
+                        Text("Goalkeeping")
+                            .font(LWFont.bodyStrong)
+                            .foregroundStyle(LWColor.ink)
+                        Text(isGoalkeepingRestDay ? "Rest day — excluded from progress" : "Scheduled for this routine day")
+                            .font(LWFont.caption)
+                            .foregroundStyle(LWColor.inkSecondary)
+                    }
+
+                    Spacer(minLength: LWSpace.xs)
+
+                    Button(isGoalkeepingRestDay ? "Goalkeeping today" : "Rest day") {
+                        setGoalkeepingRestDay(!isGoalkeepingRestDay)
+                    }
+                    .font(LWFont.captionMedium)
+                    .foregroundStyle(isGoalkeepingRestDay ? LWColor.accent : LWColor.inkSecondary)
+                    .frame(minHeight: LWSpace.minTapTarget)
+                    .buttonStyle(.plain)
+                    .accessibilityHint(isGoalkeepingRestDay ? "Restores goalkeeping tasks" : "Skips goalkeeping only for this routine day")
+                }
             }
         }
         .lwBlock(padding: LWSpace.lg, radius: LWRadius.xl)
@@ -556,7 +648,7 @@ private struct TodayView: View {
         .accessibilityHint(isPhaseCollapsed(phase) ? "Double tap to expand" : "Double tap to collapse")
     }
 
-    private func tasks(in section: Section) -> [TaskItem] {
+    private func baseTasks(in section: Section) -> [TaskItem] {
         section.tasks
             .filter {
                 !$0.isArchived
@@ -571,6 +663,12 @@ private struct TodayView: View {
                         : lhs.sortOrder < rhs.sortOrder)
                     : lhs.routinePhase.sortRank < rhs.routinePhase.sortRank
             }
+    }
+
+    private func tasks(in section: Section) -> [TaskItem] {
+        baseTasks(in: section).filter { task in
+            !isGoalkeepingRestDay || task.domain != .goalkeeping
+        }
     }
 
     private func children(of task: TaskItem) -> [TaskItem] {
@@ -910,9 +1008,13 @@ private struct TodayView: View {
     }
 
     private func captureTodayIfNeeded() -> Bool {
+        captureDayIfNeeded(today)
+    }
+
+    private func captureDayIfNeeded(_ date: Date) -> Bool {
         do {
             _ = try DaySnapshotService.captureIfNeeded(
-                for: today,
+                for: date,
                 in: modelContext,
                 calendar: calendar
             )
@@ -922,6 +1024,49 @@ private struct TodayView: View {
             modelContext.rollback()
             saveErrorMessage = error.localizedDescription
             return false
+        }
+    }
+
+    private func updateRolloverConfirmation() {
+        showingRolloverConfirmation = RoutineDaySelection.needsRolloverConfirmation(
+            now: currentTime,
+            calendar: calendar
+        )
+    }
+
+    private func deferRollover() {
+        RoutineDaySelection.deferRollover(for: calendarDay, calendar: calendar)
+        showingRolloverConfirmation = false
+    }
+
+    private func startCalendarDay() {
+        let newDay = calendarDay
+        guard captureDayIfNeeded(newDay) else { return }
+        RoutineDaySelection.select(newDay, calendar: calendar)
+        routineDay = newDay
+        showingRolloverConfirmation = false
+        undoState = nil
+        WidgetTimeline.reloadAll()
+    }
+
+    private func setGoalkeepingRestDay(_ isRestDay: Bool) {
+        guard !isSavingCompletion else { return }
+        isSavingCompletion = true
+        defer { isSavingCompletion = false }
+
+        do {
+            try GoalkeepingRestDay.setRestDay(
+                isRestDay,
+                tasks: scheduledGoalkeepingTasks,
+                date: today,
+                in: modelContext,
+                calendar: calendar
+            )
+            goalkeepingRestDayRevision += 1
+            collapseFinishedPhases()
+        } catch {
+            modelContext.rollback()
+            saveErrorMessage = error.localizedDescription
         }
     }
 

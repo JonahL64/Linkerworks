@@ -186,6 +186,122 @@ final class HistoricalProgressTests: XCTestCase {
         XCTAssertEqual(record.state, .complete)
     }
 
+    func testRoutineDaySelectionDefersOnlyTheCurrentCalendarDay() {
+        let defaults = testDefaults()
+        let yesterday = utcDate(year: 2026, month: 7, day: 20)
+        let today = utcDate(year: 2026, month: 7, day: 21)
+        let tomorrow = utcDate(year: 2026, month: 7, day: 22)
+
+        XCTAssertEqual(
+            RoutineDaySelection.selectedDay(now: today, defaults: defaults, calendar: calendar),
+            today
+        )
+        XCTAssertFalse(RoutineDaySelection.needsRolloverConfirmation(now: today, defaults: defaults, calendar: calendar))
+
+        RoutineDaySelection.select(yesterday, defaults: defaults, calendar: calendar)
+        XCTAssertTrue(RoutineDaySelection.needsRolloverConfirmation(now: today, defaults: defaults, calendar: calendar))
+
+        RoutineDaySelection.deferRollover(for: today, defaults: defaults, calendar: calendar)
+        XCTAssertFalse(RoutineDaySelection.needsRolloverConfirmation(now: today, defaults: defaults, calendar: calendar))
+        XCTAssertTrue(RoutineDaySelection.needsRolloverConfirmation(now: tomorrow, defaults: defaults, calendar: calendar))
+
+        RoutineDaySelection.select(today, defaults: defaults, calendar: calendar)
+        XCTAssertEqual(RoutineDaySelection.selectedDay(now: tomorrow, defaults: defaults, calendar: calendar), today)
+    }
+
+    func testGoalkeepingRestDaySkipsOnlyItsCompletionUnits() {
+        let date = utcDate(year: 2026, month: 7, day: 20)
+        let goalkeeping = TaskItem(title: "Goalkeeping", detail: "", daysOfWeek: ["Monday"], sortOrder: 0, domain: .goalkeeping)
+        let sleep = TaskItem(title: "Sleep", detail: "", daysOfWeek: ["Monday"], sortOrder: 1, domain: .sleep)
+        let goalkeepingIDs = GoalkeepingRestDay.completionUnitTaskIDs(for: [goalkeeping])
+
+        XCTAssertEqual(goalkeepingIDs, Set([goalkeeping.id]))
+        let completion = HistoricalDayProgress.completion(
+            scheduledTaskIDs: [goalkeeping.id, sleep.id],
+            childTaskIDsByParent: [:],
+            records: [
+                CompletionRecord(date: date, taskId: goalkeeping.id, state: .skipped),
+                CompletionRecord(date: date, taskId: sleep.id),
+            ]
+        )
+        XCTAssertEqual(completion, ProgressDayCompletion(scheduledCount: 1, completedCount: 1))
+    }
+
+    func testResumingGoalkeepingRestDayPreservesExistingCompletion() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let defaults = testDefaults()
+        let date = utcDate(year: 2026, month: 7, day: 20)
+        let task = TaskItem(title: "Goalkeeping", detail: "", daysOfWeek: ["Monday"], sortOrder: 0, domain: .goalkeeping)
+        context.insert(task)
+        context.insert(CompletionRecord(date: date, taskId: task.id, completedAt: date.addingTimeInterval(60)))
+        try context.save()
+
+        try GoalkeepingRestDay.setRestDay(
+            true,
+            tasks: [task],
+            date: date,
+            in: context,
+            defaults: defaults,
+            calendar: calendar
+        )
+        XCTAssertTrue(GoalkeepingRestDay.isRestDay(
+            tasks: [task],
+            date: date,
+            defaults: defaults,
+            calendar: calendar
+        ))
+
+        try GoalkeepingRestDay.setRestDay(
+            false,
+            tasks: [task],
+            date: date,
+            in: context,
+            defaults: defaults,
+            calendar: calendar
+        )
+        let records = try context.fetch(FetchDescriptor<CompletionRecord>())
+        XCTAssertEqual(records.filter { $0.taskId == task.id && $0.state == .complete }.count, 1)
+        XCTAssertTrue(records.contains { $0.taskId == task.id && $0.state == .skipped })
+        XCTAssertEqual(
+            HistoricalDayProgress.stateByTaskID(
+                records,
+                ignoredRecordIDs: GoalkeepingRestDay.ignoredRecordIDs(defaults: defaults)
+            )[task.id],
+            .complete
+        )
+    }
+
+    func testResumingRestDayLeavesManualGoalkeepingSkipsIntact() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let defaults = testDefaults()
+        let date = utcDate(year: 2026, month: 7, day: 20)
+        let task = TaskItem(title: "Goalkeeping", detail: "", daysOfWeek: ["Monday"], sortOrder: 0, domain: .goalkeeping)
+        context.insert(task)
+        context.insert(CompletionRecord(date: date, taskId: task.id, state: .skipped))
+        try context.save()
+
+        try GoalkeepingRestDay.setRestDay(true, tasks: [task], date: date, in: context, defaults: defaults, calendar: calendar)
+        try GoalkeepingRestDay.setRestDay(false, tasks: [task], date: date, in: context, defaults: defaults, calendar: calendar)
+
+        let records = try context.fetch(FetchDescriptor<CompletionRecord>())
+        XCTAssertEqual(HistoricalDayProgress.stateByTaskID(records)[task.id], .skipped)
+        XCTAssertTrue(records.allSatisfy { $0.state == .skipped })
+    }
+
+    func testGoalkeepingParentUsesChildCompletionUnitsForRestDay() {
+        let parent = TaskItem(title: "Goalkeeping", detail: "", daysOfWeek: ["Monday"], sortOrder: 0, domain: .goalkeeping)
+        let firstChild = TaskItem(title: "Drills", detail: "", daysOfWeek: ["Monday"], sortOrder: 0, domain: .goalkeeping, isSubstep: true, parent: parent)
+        let secondChild = TaskItem(title: "Distribution", detail: "", daysOfWeek: ["Monday"], sortOrder: 1, domain: .goalkeeping, isSubstep: true, parent: parent)
+        parent.children = [firstChild, secondChild]
+
+        XCTAssertEqual(
+            GoalkeepingRestDay.completionUnitTaskIDs(for: [parent]),
+            Set([firstChild.id, secondChild.id])
+        )
+    }
+
     private func completion(
         for snapshot: DaySnapshot,
         records: [CompletionRecord]
