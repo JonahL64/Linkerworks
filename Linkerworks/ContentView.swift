@@ -960,9 +960,7 @@ private struct ActiveWorkoutBanner: View {
                 Image(systemName: "figure.strengthtraining.traditional")
                     .foregroundStyle(TrainingLogTheme.completionAccent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(workout.title?
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                        .flatMap { $0.isEmpty ? nil : $0 } ?? "WORKOUT IN PROGRESS")
+                    Text(displayTitle)
                         .font(.subheadline.weight(.semibold))
                     Text("\(elapsedText(at: context.date))  ·  \(setCount) SETS")
                         .font(.caption)
@@ -982,6 +980,11 @@ private struct ActiveWorkoutBanner: View {
     private func elapsedText(at date: Date) -> String {
         let seconds = max(0, Int(date.timeIntervalSince(workout.startedAt)))
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+
+    private var displayTitle: String {
+        let title = workout.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return title.isEmpty ? "WORKOUT IN PROGRESS" : title
     }
 }
 

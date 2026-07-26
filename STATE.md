@@ -244,3 +244,9 @@ Sprint 6 compile repair changed `Linkerworks/ContentView.swift` only.
 This fixes the Xcode access-control error at the Today resume banner without broadening helper visibility.
 No workout persistence, session state, UI behavior, or schema changed.
 Validation will cover Swift source parsing and whitespace checks; full Xcode compilation remains required on macOS.
+
+Compile repair: `ActiveWorkoutBanner` in `Linkerworks/ContentView.swift` now derives its title in a typed `String` helper.
+The prior optional-chain expression dispatched `flatMap` to `String`'s character collection, producing an optional character array rather than text.
+Blank or whitespace-only titles still render as `WORKOUT IN PROGRESS`; nonblank titles are unchanged.
+No workout models, persistence, or UI behavior beyond resolving the compile error changed.
+Validation passed: `swiftc -parse Linkerworks/ContentView.swift` and `git diff --check`.
