@@ -73,6 +73,91 @@ final class WidgetProjectionTests: XCTestCase {
         XCTAssertEqual([none, dated].filter { !$0.isDone && $0.dueDate != HomeworkSupport.noDueDate }.sorted { $0.dueDate < $1.dueDate }.first?.title, "Essay")
     }
 
+    func testWidgetRefreshTargetsRouteToSeparateKinds() {
+        XCTAssertEqual(
+            WidgetTimeline.kind(for: .routine),
+            WidgetTimeline.routineKind
+        )
+        XCTAssertEqual(
+            WidgetTimeline.kind(for: .assignments),
+            WidgetTimeline.assignmentKind
+        )
+        XCTAssertNotEqual(
+            WidgetTimeline.kind(for: .routine),
+            WidgetTimeline.kind(for: .assignments)
+        )
+    }
+
+    func testAssignmentProjectionUsesStableTieBreakers() {
+        let dueDate = Date(timeIntervalSince1970: 1_800_000_000)
+        let laterCourse = Course(
+            name: "Later course",
+            colorHex: "#000000",
+            sortOrder: 2
+        )
+        let firstCourse = Course(
+            name: "First course",
+            colorHex: "#FFFFFF",
+            sortOrder: 0
+        )
+        let later = Assignment(
+            title: "Later",
+            course: laterCourse,
+            dueDate: dueDate,
+            sortOrder: 0
+        )
+        let first = Assignment(
+            title: "First",
+            course: firstCourse,
+            dueDate: dueDate,
+            sortOrder: 1
+        )
+
+        XCTAssertEqual(
+            AssignmentProjection.ordered([later, first]).map(\.title),
+            ["First", "Later"]
+        )
+    }
+
+    func testCalendarPlanProjectionGroupsAndOrdersEachCollection() {
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: Date())
+        let allDay = CalendarEvent(
+            title: "All day",
+            date: day,
+            isAllDay: true,
+            sortOrder: 1
+        )
+        let timed = CalendarEvent(
+            title: "Timed",
+            date: day,
+            startTime: day.addingTimeInterval(3_600),
+            isAllDay: false,
+            sortOrder: 0
+        )
+        let due = Assignment(title: "Due", dueDate: day, sortOrder: 0)
+        let completed = Assignment(
+            title: "Done",
+            dueDate: day,
+            isDone: true,
+            sortOrder: 1
+        )
+        let laterTodo = DailyTodo(title: "Later", scheduledDate: day, sortOrder: 2)
+        let firstTodo = DailyTodo(title: "First", scheduledDate: day, sortOrder: 0)
+
+        let projection = CalendarPlanProjection(
+            events: [timed, allDay],
+            assignments: [completed, due],
+            todos: [laterTodo, firstTodo],
+            calendar: calendar
+        )
+        let key = DaySnapshotService.dayKey(for: day, calendar: calendar)
+
+        XCTAssertEqual(projection.eventsByDayKey[key]?.map(\.title), ["All day", "Timed"])
+        XCTAssertEqual(projection.assignmentsByDayKey[key]?.map(\.title), ["Due"])
+        XCTAssertEqual(projection.todosByDayKey[key]?.map(\.title), ["First", "Later"])
+    }
+
     func testWidgetCompletionOfLiftParentWritesTheSameChildRecordsAsToday() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

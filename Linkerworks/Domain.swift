@@ -2,13 +2,42 @@ import Foundation
 import SwiftData
 import WidgetKit
 
+enum WidgetRefreshTarget {
+    case routine
+    case assignments
+}
+
 enum WidgetTimeline {
     static let routineKind = "LinkerworksWidget"
     static let assignmentKind = "LinkerworksAssignmentWidget"
 
-    static func reloadAll() {
-        WidgetCenter.shared.reloadTimelines(ofKind: routineKind)
-        WidgetCenter.shared.reloadTimelines(ofKind: assignmentKind)
+    static func kind(for target: WidgetRefreshTarget) -> String {
+        switch target {
+        case .routine: routineKind
+        case .assignments: assignmentKind
+        }
+    }
+
+    static func reloadRoutine() {
+        WidgetCenter.shared.reloadTimelines(ofKind: kind(for: .routine))
+    }
+
+    static func reloadAssignments() {
+        WidgetCenter.shared.reloadTimelines(ofKind: kind(for: .assignments))
+    }
+
+}
+
+enum AssignmentProjection {
+    static func ordered(_ assignments: [Assignment]) -> [Assignment] {
+        assignments.sorted {
+            if $0.dueDate != $1.dueDate { return $0.dueDate < $1.dueDate }
+            let lhsCourse = $0.course?.sortOrder ?? .max
+            let rhsCourse = $1.course?.sortOrder ?? .max
+            if lhsCourse != rhsCourse { return lhsCourse < rhsCourse }
+            if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
     }
 }
 
@@ -95,7 +124,7 @@ enum RoutineCompletionCommand {
             recordTaskIDs.forEach { context.insert(CompletionRecord(date: date, taskId: $0, state: state)) }
         }
         try context.save()
-        WidgetTimeline.reloadAll()
+        WidgetTimeline.reloadRoutine()
     }
 
     /// Completes an incomplete task at the point of action. Parent tasks with
@@ -246,7 +275,7 @@ enum GoalkeepingRestDay {
         guard isRestDay else {
             stored.isActive = false
             save(stored, for: date, defaults: defaults, calendar: calendar)
-            WidgetTimeline.reloadAll()
+            WidgetTimeline.reloadRoutine()
             return
         }
 
@@ -266,7 +295,7 @@ enum GoalkeepingRestDay {
         stored.isActive = true
         try context.save()
         save(stored, for: date, defaults: defaults, calendar: calendar)
-        WidgetTimeline.reloadAll()
+        WidgetTimeline.reloadRoutine()
     }
 
     static func ignoredRecordIDs(defaults: UserDefaults? = sharedDefaults) -> Set<UUID> {
@@ -326,12 +355,42 @@ struct ProgressDayCompletion: Equatable {
 /// skipped children are removed from its captured completion unit; when every
 /// child is skipped, the parent is removed too.
 enum HistoricalDayProgress {
+    static func isTaskComplete(
+        taskID: UUID,
+        childTaskIDs: [UUID],
+        states: [UUID: CompletionRecordState]
+    ) -> Bool {
+        guard !childTaskIDs.isEmpty else {
+            return states[taskID] == .complete
+        }
+
+        let childStates = childTaskIDs.compactMap { states[$0] }
+        guard !childStates.isEmpty else {
+            return states[taskID] == .complete
+        }
+
+        let activeChildIDs = childTaskIDs.filter { states[$0] != .skipped }
+        guard !activeChildIDs.isEmpty else { return false }
+        return activeChildIDs.allSatisfy { states[$0] == .complete }
+    }
+
     static func completion(
         scheduledTaskIDs: [UUID],
         childTaskIDsByParent: [UUID: [UUID]],
         records: [CompletionRecord]
     ) -> ProgressDayCompletion {
-        let states = stateByTaskID(records)
+        completion(
+            scheduledTaskIDs: scheduledTaskIDs,
+            childTaskIDsByParent: childTaskIDsByParent,
+            states: stateByTaskID(records)
+        )
+    }
+
+    static func completion(
+        scheduledTaskIDs: [UUID],
+        childTaskIDsByParent: [UUID: [UUID]],
+        states: [UUID: CompletionRecordState]
+    ) -> ProgressDayCompletion {
         var scheduledCount = 0
         var completedCount = 0
 
@@ -365,7 +424,11 @@ enum HistoricalDayProgress {
             }
 
             scheduledCount += 1
-            if activeChildIDs.allSatisfy({ states[$0] == .complete }) {
+            if isTaskComplete(
+                taskID: taskID,
+                childTaskIDs: childIDs,
+                states: states
+            ) {
                 completedCount += 1
             }
         }
@@ -390,6 +453,30 @@ enum HistoricalDayProgress {
             .reduce(into: [:]) { states, record in
                 states[record.taskId] = record.state
             }
+    }
+}
+
+/// One pass over completion history, shared by every day-based projection on a
+/// screen. Records retain their deterministic last-write-wins semantics while
+/// callers avoid repeatedly filtering and sorting the full history.
+@MainActor
+struct CompletionRecordDayIndex {
+    let recordsByDayKey: [String: [CompletionRecord]]
+    let statesByDayKey: [String: [UUID: CompletionRecordState]]
+
+    init(
+        records: [CompletionRecord],
+        ignoredRecordIDs: Set<UUID>,
+        calendar: Calendar = .current
+    ) {
+        let grouped = Dictionary(
+            grouping: records.filter { !ignoredRecordIDs.contains($0.id) },
+            by: { DaySnapshotService.dayKey(for: $0.date, calendar: calendar) }
+        )
+        recordsByDayKey = grouped
+        statesByDayKey = grouped.mapValues {
+            HistoricalDayProgress.stateByTaskID($0, ignoredRecordIDs: [])
+        }
     }
 }
 

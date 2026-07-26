@@ -49,14 +49,7 @@ enum HomeworkSupport {
     }
 
     static func ordered(_ assignments: [Assignment]) -> [Assignment] {
-        assignments.sorted {
-            if $0.dueDate != $1.dueDate { return $0.dueDate < $1.dueDate }
-            let leftCourse = $0.course?.sortOrder ?? .max
-            let rightCourse = $1.course?.sortOrder ?? .max
-            if leftCourse != rightCourse { return leftCourse < rightCourse }
-            if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
-            return $0.id.uuidString < $1.id.uuidString
-        }
+        AssignmentProjection.ordered(assignments)
     }
 }
 
@@ -324,7 +317,7 @@ struct HomeworkView: View {
     }
 
     private func save() {
-        do { try modelContext.save(); WidgetTimeline.reloadAll() } catch { modelContext.rollback(); saveError = error.localizedDescription }
+        do { try modelContext.save(); WidgetTimeline.reloadAssignments() } catch { modelContext.rollback(); saveError = error.localizedDescription }
     }
 }
 
@@ -428,7 +421,7 @@ private struct AssignmentEditorView: View {
         let item = assignment ?? Assignment(title: cleanTitle, dueDate: finalDate, sortOrder: (courses.flatMap(\.assignments).map(\.sortOrder).max() ?? -1) + 1)
         item.title = cleanTitle; item.course = course; item.dueDate = finalDate; item.usesDefaultTime = usesDefaultTime; item.notes = notes.isEmpty ? nil : notes; item.updatedAt = Date()
         if assignment == nil { modelContext.insert(item) }
-        do { try modelContext.save(); WidgetTimeline.reloadAll(); dismiss() } catch let saveFailure { error = saveFailure.localizedDescription }
+        do { try modelContext.save(); WidgetTimeline.reloadAssignments(); dismiss() } catch let saveFailure { error = saveFailure.localizedDescription }
     }
 }
 
@@ -502,7 +495,7 @@ private struct CoursesView: View {
     private func save() {
         do {
             try modelContext.save()
-            WidgetTimeline.reloadAll()
+            WidgetTimeline.reloadAssignments()
         } catch {
             modelContext.rollback()
         }
@@ -614,7 +607,7 @@ private struct CourseEditorView: View {
 
         do {
             try modelContext.save()
-            WidgetTimeline.reloadAll()
+            WidgetTimeline.reloadAssignments()
             dismiss()
         } catch let saveFailure {
             error = saveFailure.localizedDescription

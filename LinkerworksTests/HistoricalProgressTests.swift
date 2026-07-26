@@ -302,6 +302,105 @@ final class HistoricalProgressTests: XCTestCase {
         )
     }
 
+    func testCompletionRecordDayIndexGroupsOnceAndPreservesLatestState() {
+        let firstDay = utcDate(year: 2026, month: 7, day: 20)
+        let secondDay = utcDate(year: 2026, month: 7, day: 21)
+        let taskID = UUID()
+        let early = CompletionRecord(
+            date: firstDay,
+            taskId: taskID,
+            completedAt: firstDay.addingTimeInterval(60),
+            state: .complete
+        )
+        let late = CompletionRecord(
+            date: firstDay,
+            taskId: taskID,
+            completedAt: firstDay.addingTimeInterval(120),
+            state: .skipped
+        )
+        let next = CompletionRecord(date: secondDay, taskId: taskID)
+
+        let index = CompletionRecordDayIndex(
+            records: [late, next, early],
+            ignoredRecordIDs: [],
+            calendar: calendar
+        )
+        let firstKey = DaySnapshotService.dayKey(for: firstDay, calendar: calendar)
+        let secondKey = DaySnapshotService.dayKey(for: secondDay, calendar: calendar)
+
+        XCTAssertEqual(index.recordsByDayKey[firstKey]?.count, 2)
+        XCTAssertEqual(index.recordsByDayKey[secondKey]?.count, 1)
+        XCTAssertEqual(index.statesByDayKey[firstKey]?[taskID], .skipped)
+        XCTAssertEqual(index.statesByDayKey[secondKey]?[taskID], .complete)
+    }
+
+    func testCompletionRecordDayIndexExcludesIgnoredRestDayRecords() {
+        let date = utcDate(year: 2026, month: 7, day: 20)
+        let taskID = UUID()
+        let retained = CompletionRecord(
+            date: date,
+            taskId: taskID,
+            completedAt: date.addingTimeInterval(60),
+            state: .complete
+        )
+        let ignored = CompletionRecord(
+            date: date,
+            taskId: taskID,
+            completedAt: date.addingTimeInterval(120),
+            state: .skipped
+        )
+        let index = CompletionRecordDayIndex(
+            records: [retained, ignored],
+            ignoredRecordIDs: [ignored.id],
+            calendar: calendar
+        )
+        let key = DaySnapshotService.dayKey(for: date, calendar: calendar)
+
+        XCTAssertEqual(index.recordsByDayKey[key]?.map(\.id), [retained.id])
+        XCTAssertEqual(index.statesByDayKey[key]?[taskID], .complete)
+    }
+
+    func testSkipAwareTaskCompletionMatchesHistoricalProgress() {
+        let parentID = UUID()
+        let completedChildID = UUID()
+        let skippedChildID = UUID()
+        let states: [UUID: CompletionRecordState] = [
+            completedChildID: .complete,
+            skippedChildID: .skipped,
+        ]
+
+        XCTAssertTrue(HistoricalDayProgress.isTaskComplete(
+            taskID: parentID,
+            childTaskIDs: [completedChildID, skippedChildID],
+            states: states
+        ))
+        XCTAssertEqual(
+            HistoricalDayProgress.completion(
+                scheduledTaskIDs: [parentID],
+                childTaskIDsByParent: [
+                    parentID: [completedChildID, skippedChildID],
+                ],
+                states: states
+            ),
+            ProgressDayCompletion(scheduledCount: 1, completedCount: 1)
+        )
+    }
+
+    func testChildStateOverridesLegacyParentCompletion() {
+        let parentID = UUID()
+        let childID = UUID()
+        let states: [UUID: CompletionRecordState] = [
+            parentID: .complete,
+            childID: .skipped,
+        ]
+
+        XCTAssertFalse(HistoricalDayProgress.isTaskComplete(
+            taskID: parentID,
+            childTaskIDs: [childID],
+            states: states
+        ))
+    }
+
     private func completion(
         for snapshot: DaySnapshot,
         records: [CompletionRecord]

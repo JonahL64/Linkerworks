@@ -2,6 +2,45 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+private struct StreakProjectionRevision: Hashable {
+    private struct RecordValue: Hashable {
+        let id: UUID
+        let date: Date
+        let taskID: UUID
+        let completedAt: Date
+        let state: String
+    }
+
+    private struct SnapshotValue: Hashable {
+        let dayKey: String
+        let capturedAt: Date
+    }
+
+    private let records: [RecordValue]
+    private let snapshots: [SnapshotValue]
+    private let ignoredRecordIDs: [String]
+
+    init(
+        completionRecords: [CompletionRecord],
+        daySnapshots: [DaySnapshot],
+        ignoredRecordIDs: Set<UUID>
+    ) {
+        records = completionRecords.map {
+            RecordValue(
+                id: $0.id,
+                date: $0.date,
+                taskID: $0.taskId,
+                completedAt: $0.completedAt,
+                state: $0.state.rawValue
+            )
+        }
+        snapshots = daySnapshots.map {
+            SnapshotValue(dayKey: $0.dayKey, capturedAt: $0.capturedAt)
+        }
+        self.ignoredRecordIDs = ignoredRecordIDs.map(\.uuidString).sorted()
+    }
+}
+
 /// A current streak is measured through yesterday. This avoids treating an
 /// in-progress today as either a completed or broken streak.
 struct StreaksView: View {
@@ -11,27 +50,29 @@ struct StreaksView: View {
 
     private let calendar = Calendar.current
 
-    private var summary: StreakSummary {
-        StreakSummary(
-            tasks: tasks,
-            completionRecords: completionRecords,
-            daySnapshots: daySnapshots,
-            calendar: calendar
-        )
-    }
-
     private var currentMonth: Date {
         calendar.dateInterval(of: .month, for: Date())?.start
             ?? calendar.startOfDay(for: Date())
     }
 
     @State private var showingHeatmapInfo = false
+    @State private var summaryCache: StreakSummaryCache?
 
     var body: some View {
+        let ignoredRecordIDs = GoalkeepingRestDay.ignoredRecordIDs()
+        let revision = StreakProjectionRevision(
+            completionRecords: completionRecords,
+            daySnapshots: daySnapshots,
+            ignoredRecordIDs: ignoredRecordIDs
+        )
+        let summary = summaryCache?.revision == revision
+            ? summaryCache!.summary
+            : makeSummary(ignoredRecordIDs: ignoredRecordIDs)
+
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: LWSpace.xl) {
-                    streakBlock
+                    streakBlock(summary: summary)
 
                     LWSection("Last 14 days") {
                         TrendStripView(
@@ -80,13 +121,32 @@ struct StreaksView: View {
             } message: {
                 Text("Skipped tasks are excluded from daily progress. Days with no scheduled tasks, or every task skipped, are neutral for streaks.")
             }
+            .task(id: revision) {
+                guard summaryCache?.revision != revision else { return }
+                summaryCache = StreakSummaryCache(
+                    revision: revision,
+                    summary: makeSummary(ignoredRecordIDs: ignoredRecordIDs)
+                )
+            }
         }
         .trainingLogNavigation()
     }
 
+    private func makeSummary(
+        ignoredRecordIDs: Set<UUID>
+    ) -> StreakSummary {
+        StreakSummary(
+            tasks: tasks,
+            completionRecords: completionRecords,
+            daySnapshots: daySnapshots,
+            ignoredRecordIDs: ignoredRecordIDs,
+            calendar: calendar
+        )
+    }
+
     /// The headline pair. Current streak leads at full display size; longest is
     /// supporting context rather than a co-equal number.
-    private var streakBlock: some View {
+    private func streakBlock(summary: StreakSummary) -> some View {
         VStack(alignment: .leading, spacing: LWSpace.md) {
             VStack(alignment: .leading, spacing: LWSpace.xxs) {
                 Text("Current streak")
@@ -305,22 +365,42 @@ private struct WeekRollup {
     }
 }
 
+@MainActor
+private struct StreakSummaryCache {
+    let revision: StreakProjectionRevision
+    let summary: StreakSummary
+}
+
+@MainActor
 private struct StreakSummary {
     private let tasks: [TaskItem]
-    private let completionRecords: [CompletionRecord]
-    private let daySnapshots: [DaySnapshot]
+    private let statesByDayKey: [String: [UUID: CompletionRecordState]]
+    private let snapshotsByDayKey: [String: HistoricalProgressSnapshot]
+    private let historyStartDate: Date?
     private let calendar: Calendar
 
     init(
         tasks: [TaskItem],
         completionRecords: [CompletionRecord],
         daySnapshots: [DaySnapshot],
+        ignoredRecordIDs: Set<UUID>? = nil,
         calendar: Calendar
     ) {
         self.tasks = tasks
-        self.completionRecords = completionRecords
-        self.daySnapshots = daySnapshots
         self.calendar = calendar
+        statesByDayKey = CompletionRecordDayIndex(
+            records: completionRecords,
+            ignoredRecordIDs: ignoredRecordIDs ?? GoalkeepingRestDay.ignoredRecordIDs(),
+            calendar: calendar
+        ).statesByDayKey
+        snapshotsByDayKey = Dictionary(grouping: daySnapshots, by: \.dayKey)
+            .compactMapValues { snapshots in
+                snapshots.last.map { HistoricalProgressSnapshot(snapshot: $0) }
+            }
+        let snapshotDates = daySnapshots.compactMap {
+            DaySnapshotService.date(for: $0.dayKey, calendar: calendar)
+        }
+        historyStartDate = (completionRecords.map(\.date) + snapshotDates).min()
     }
 
     var currentStreak: Int {
@@ -359,19 +439,18 @@ private struct StreakSummary {
     func completion(for date: Date) -> ProgressDayCompletion {
         let key = DaySnapshotService.dayKey(for: date, calendar: calendar)
         let input: HistoricalProgressSnapshot
-        if let snapshot = daySnapshots.first(where: { $0.dayKey == key }) {
-            input = HistoricalProgressSnapshot(snapshot: snapshot)
+        if let snapshot = snapshotsByDayKey[key] {
+            input = snapshot
         } else if calendar.isDateInToday(date) {
             // Today is the only permitted live-schedule fallback before capture.
             input = HistoricalProgressSnapshot(tasks: tasks, date: date, calendar: calendar)
         } else {
             return ProgressDayCompletion(scheduledCount: 0, completedCount: 0)
         }
-        let records = completionRecords.filter { calendar.isDate($0.date, inSameDayAs: date) }
         return HistoricalDayProgress.completion(
             scheduledTaskIDs: input.scheduledTaskIDs,
             childTaskIDsByParent: input.childTaskIDsByParent,
-            records: records
+            states: statesByDayKey[key] ?? [:]
         )
     }
 
@@ -437,9 +516,6 @@ private struct StreakSummary {
     }
 
     private var historyStart: Date? {
-        let snapshotDates = daySnapshots.compactMap {
-            DaySnapshotService.date(for: $0.dayKey, calendar: calendar)
-        }
-        return (completionRecords.map(\.date) + snapshotDates).min()
+        historyStartDate
     }
 }

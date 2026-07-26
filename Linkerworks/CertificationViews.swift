@@ -582,7 +582,7 @@ private struct StudyTaskEditorView: View {
 
         do {
             try modelContext.save()
-            WidgetTimeline.reloadAll()
+            WidgetTimeline.reloadRoutine()
             onCreated(task)
             dismiss()
         } catch {

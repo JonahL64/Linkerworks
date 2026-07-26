@@ -1,6 +1,133 @@
 import SwiftData
 import SwiftUI
 
+@MainActor
+struct CalendarPlanProjection {
+    let eventsByDayKey: [String: [CalendarEvent]]
+    let assignmentsByDayKey: [String: [Assignment]]
+    let todosByDayKey: [String: [DailyTodo]]
+
+    init(
+        events: [CalendarEvent],
+        assignments: [Assignment],
+        todos: [DailyTodo],
+        calendar: Calendar = .current
+    ) {
+        eventsByDayKey = Dictionary(
+            grouping: events,
+            by: { DaySnapshotService.dayKey(for: $0.date, calendar: calendar) }
+        ).mapValues(Self.orderedEvents)
+        assignmentsByDayKey = Dictionary(
+            grouping: assignments.filter {
+                !$0.isDone && $0.dueDate != HomeworkSupport.noDueDate
+            },
+            by: { DaySnapshotService.dayKey(for: $0.dueDate, calendar: calendar) }
+        ).mapValues(HomeworkSupport.ordered)
+        todosByDayKey = Dictionary(grouping: todos, by: \.scheduledDayKey)
+            .mapValues(DailyTodoSupport.ordered)
+    }
+
+    static func orderedEvents(_ events: [CalendarEvent]) -> [CalendarEvent] {
+        events.sorted { lhs, rhs in
+            if lhs.isAllDay != rhs.isAllDay {
+                return lhs.isAllDay
+            }
+
+            let lhsTime = lhs.startTime ?? .distantPast
+            let rhsTime = rhs.startTime ?? .distantPast
+            if lhsTime != rhsTime {
+                return lhsTime < rhsTime
+            }
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
+            }
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+    }
+}
+
+private struct CalendarPlanRevision: Hashable {
+    private struct EventValue: Hashable {
+        let id: UUID
+        let date: Date
+        let startTime: Date?
+        let isAllDay: Bool
+        let sortOrder: Int
+        let createdAt: Date
+        let updatedAt: Date
+    }
+
+    private struct AssignmentValue: Hashable {
+        let id: UUID
+        let dueDate: Date
+        let isDone: Bool
+        let sortOrder: Int
+        let courseSortOrder: Int?
+        let createdAt: Date
+        let updatedAt: Date
+    }
+
+    private struct TodoValue: Hashable {
+        let id: UUID
+        let scheduledDayKey: String
+        let sortOrder: Int
+        let createdAt: Date
+        let updatedAt: Date
+    }
+
+    private let events: [EventValue]
+    private let assignments: [AssignmentValue]
+    private let todos: [TodoValue]
+
+    init(
+        events: [CalendarEvent],
+        assignments: [Assignment],
+        todos: [DailyTodo],
+        includesAssignments: Bool
+    ) {
+        self.events = events.map {
+            EventValue(
+                id: $0.id,
+                date: $0.date,
+                startTime: $0.startTime,
+                isAllDay: $0.isAllDay,
+                sortOrder: $0.sortOrder,
+                createdAt: $0.createdAt,
+                updatedAt: $0.updatedAt
+            )
+        }
+        self.assignments = includesAssignments ? assignments.map {
+            AssignmentValue(
+                id: $0.id,
+                dueDate: $0.dueDate,
+                isDone: $0.isDone,
+                sortOrder: $0.sortOrder,
+                courseSortOrder: $0.course?.sortOrder,
+                createdAt: $0.createdAt,
+                updatedAt: $0.updatedAt
+            )
+        } : []
+        self.todos = todos.map {
+            TodoValue(
+                id: $0.id,
+                scheduledDayKey: $0.scheduledDayKey,
+                sortOrder: $0.sortOrder,
+                createdAt: $0.createdAt,
+                updatedAt: $0.updatedAt
+            )
+        }
+    }
+}
+
+@MainActor
+private struct CalendarPlanProjectionCache {
+    let revision: CalendarPlanRevision
+    let projection: CalendarPlanProjection
+}
+
 struct CalendarPlanView: View {
     @Binding var showingManageRoutine: Bool
 
@@ -16,13 +143,10 @@ struct CalendarPlanView: View {
     @State private var isPresentingEditor = false
     @State private var eventToEdit: CalendarEvent?
     @State private var saveErrorMessage: String?
+    @State private var projectionCache: CalendarPlanProjectionCache?
 
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
-
-    private var todosByDayKey: [String: [DailyTodo]] {
-        Dictionary(grouping: dailyTodos, by: \.scheduledDayKey)
-    }
 
     private var weekdaySymbols: [String] {
         let symbols = calendar.veryShortWeekdaySymbols
@@ -36,11 +160,21 @@ struct CalendarPlanView: View {
     }
 
     var body: some View {
+        let revision = CalendarPlanRevision(
+            events: events,
+            assignments: assignments,
+            todos: dailyTodos,
+            includesAssignments: homeworkIntegrationEnabled
+        )
+        let projection = projectionCache?.revision == revision
+            ? projectionCache!.projection
+            : makeProjection()
+
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: LWSpace.xl) {
-                    monthView
-                    agenda(for: selectedDate, showDateHeader: true)
+                    monthView(projection: projection)
+                    agenda(for: selectedDate, showDateHeader: true, projection: projection)
 
                     Button {
                         showingManageRoutine = true
@@ -101,11 +235,27 @@ struct CalendarPlanView: View {
             } message: {
                 Text(saveErrorMessage ?? "")
             }
+            .task(id: revision) {
+                guard projectionCache?.revision != revision else { return }
+                projectionCache = CalendarPlanProjectionCache(
+                    revision: revision,
+                    projection: makeProjection()
+                )
+            }
             .trainingLogNavigation()
         }
     }
 
-    private var monthView: some View {
+    private func makeProjection() -> CalendarPlanProjection {
+        CalendarPlanProjection(
+            events: events,
+            assignments: homeworkIntegrationEnabled ? assignments : [],
+            todos: dailyTodos,
+            calendar: calendar
+        )
+    }
+
+    private func monthView(projection: CalendarPlanProjection) -> some View {
         VStack(alignment: .leading, spacing: LWSpace.sm) {
             HStack {
                 Text(displayedMonth, format: .dateTime.month(.wide).year())
@@ -157,9 +307,9 @@ struct CalendarPlanView: View {
                                 date: date,
                                 isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
                                 isToday: calendar.isDateInToday(date),
-                                hasEvents: !events(on: date).isEmpty,
-                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date).isEmpty,
-                                hasTodos: !todos(on: date).isEmpty
+                                hasEvents: !events(on: date, projection: projection).isEmpty,
+                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date, projection: projection).isEmpty,
+                                hasTodos: !todos(on: date, projection: projection).isEmpty
                             )
                         }
                         .buttonStyle(.plain)
@@ -173,10 +323,16 @@ struct CalendarPlanView: View {
     }
 
     @ViewBuilder
-    private func agenda(for date: Date, showDateHeader: Bool) -> some View {
-        let dailyEvents = events(on: date)
-        let dailyAssignments = homeworkIntegrationEnabled ? assignments(on: date) : []
-        let dailyTodos = todos(on: date)
+    private func agenda(
+        for date: Date,
+        showDateHeader: Bool,
+        projection: CalendarPlanProjection
+    ) -> some View {
+        let dailyEvents = events(on: date, projection: projection)
+        let dailyAssignments = homeworkIntegrationEnabled
+            ? assignments(on: date, projection: projection)
+            : []
+        let dailyTodos = todos(on: date, projection: projection)
 
         VStack(alignment: .leading, spacing: LWSpace.xs) {
             if showDateHeader {
@@ -244,43 +400,25 @@ struct CalendarPlanView: View {
         }
     }
 
-    private func events(on date: Date) -> [CalendarEvent] {
-        events
-            .filter { calendar.isDate($0.date, inSameDayAs: date) }
-            .sorted { lhs, rhs in
-                if lhs.isAllDay != rhs.isAllDay {
-                    return lhs.isAllDay
-                }
-
-                let lhsTime = lhs.startTime ?? .distantPast
-                let rhsTime = rhs.startTime ?? .distantPast
-                if lhsTime != rhsTime {
-                    return lhsTime < rhsTime
-                }
-                if lhs.sortOrder != rhs.sortOrder {
-                    return lhs.sortOrder < rhs.sortOrder
-                }
-                if lhs.createdAt != rhs.createdAt {
-                    return lhs.createdAt < rhs.createdAt
-                }
-                return lhs.id.uuidString < rhs.id.uuidString
-            }
+    private func events(
+        on date: Date,
+        projection: CalendarPlanProjection
+    ) -> [CalendarEvent] {
+        projection.eventsByDayKey[DaySnapshotService.dayKey(for: date, calendar: calendar)] ?? []
     }
 
-    private func assignments(on date: Date) -> [Assignment] {
-        HomeworkSupport.ordered(
-            assignments.filter {
-                !$0.isDone
-                    && $0.dueDate != HomeworkSupport.noDueDate
-                    && calendar.isDate($0.dueDate, inSameDayAs: date)
-            }
-        )
+    private func assignments(
+        on date: Date,
+        projection: CalendarPlanProjection
+    ) -> [Assignment] {
+        projection.assignmentsByDayKey[DaySnapshotService.dayKey(for: date, calendar: calendar)] ?? []
     }
 
-    private func todos(on date: Date) -> [DailyTodo] {
-        DailyTodoSupport.ordered(
-            todosByDayKey[DailyTodoSupport.dayKey(for: date, calendar: calendar)] ?? []
-        )
+    private func todos(
+        on date: Date,
+        projection: CalendarPlanProjection
+    ) -> [DailyTodo] {
+        projection.todosByDayKey[DailyTodoSupport.dayKey(for: date, calendar: calendar)] ?? []
     }
 
     private func select(_ date: Date) {
@@ -320,7 +458,11 @@ struct CalendarPlanView: View {
             event.notes = draft.notes
             event.updatedAt = Date()
         } else {
-            let sortOrder = events(on: normalizedDate).map(\.sortOrder).max().map { $0 + 1 } ?? 0
+            let sortOrder = events
+                .filter { calendar.isDate($0.date, inSameDayAs: normalizedDate) }
+                .map(\.sortOrder)
+                .max()
+                .map { $0 + 1 } ?? 0
             modelContext.insert(CalendarEvent(
                 title: draft.title,
                 date: normalizedDate,

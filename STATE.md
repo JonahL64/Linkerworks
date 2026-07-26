@@ -385,3 +385,11 @@ Plan in `Linkerworks/CalendarPlanView.swift` links to the manager, shows a disti
 `LinkerworksTests/DailyTodoTests.swift` covers stable normalized day keys across timezone changes, deterministic ordering, completion transitions, future-day/held-routine-day visibility, and routine-progress calculation isolation.
 Validation passed: `swiftc -parse Linkerworks/*.swift LinkerworksWidget/*.swift LinkerworksTests/*.swift` and `git diff --check`.
 Full typecheck/build, SwiftData migration, XCTest execution, and device UI validation remain unavailable because the active developer directory has Command Line Tools only; `swiftc -typecheck` cannot import UIKit and `xcodebuild` requires full Xcode.
+
+Whole-app responsiveness pass now projects Today completion state once per redraw and reuses task, skip, phase, and progress sets in `Linkerworks/ContentView.swift`.
+`Linkerworks/Domain.swift` adds a one-pass completion-history day index plus separate routine and assignment widget reload routes.
+Plan now groups and deterministically orders events, active assignments, and daily to-dos once per redraw in `Linkerworks/CalendarPlanView.swift`.
+Progress now indexes snapshots and completion states by day and shares one `StreakSummary` projection across the screen redraw.
+The routine and assignment widgets now use separate load paths; routine projection reuses one completed-ID set, while assignment ties retain deterministic homework ordering.
+Focused coverage for indexes, ignored rest-day records, Plan ordering, and widget refresh routing was added under `LinkerworksTests/`.
+Swift parsing, project plist lint, and diff whitespace validation pass; XCTest, device profiling, and hands-on iPhone responsiveness checks still require full Xcode.

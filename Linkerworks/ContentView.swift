@@ -53,10 +53,50 @@ private enum AppTab: Hashable {
 }
 
 @MainActor
+private struct TodayCompletionProjection {
+    let statesByTaskID: [UUID: CompletionRecordState]
+    let completedTaskIDs: Set<UUID>
+    let skippedTaskIDs: Set<UUID>
+    let progress: ProgressDayCompletion
+
+    init(records: [CompletionRecord], tasks: [TaskItem]) {
+        self.init(
+            states: HistoricalDayProgress.stateByTaskID(records, ignoredRecordIDs: []),
+            tasks: tasks
+        )
+    }
+
+    init(states: [UUID: CompletionRecordState], tasks: [TaskItem]) {
+        statesByTaskID = states
+        completedTaskIDs = Set(states.compactMap { $0.value == .complete ? $0.key : nil })
+        skippedTaskIDs = Set(states.compactMap { $0.value == .skipped ? $0.key : nil })
+        progress = HistoricalDayProgress.completion(
+            scheduledTaskIDs: tasks.map(\.id),
+            childTaskIDsByParent: DaySnapshotService.childTaskIDsByParent(for: tasks),
+            states: states
+        )
+    }
+
+    func projecting(
+        removing taskIDs: Set<UUID>,
+        setting recordTaskIDs: Set<UUID>,
+        to state: CompletionRecordState?,
+        tasks: [TaskItem]
+    ) -> TodayCompletionProjection {
+        var projectedStates = statesByTaskID
+        taskIDs.forEach { projectedStates.removeValue(forKey: $0) }
+        if let state {
+            recordTaskIDs.forEach { projectedStates[$0] = state }
+        }
+        return TodayCompletionProjection(states: projectedStates, tasks: tasks)
+    }
+}
+
+@MainActor
 private struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \DaySchedule.weekdayIndex) private var daySchedules: [DaySchedule]
-    @Query(sort: \CompletionRecord.completedAt) private var completionRecords: [CompletionRecord]
     @Query private var assignments: [Assignment]
     @Query private var dailyTodos: [DailyTodo]
     @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var workoutSessions: [WorkoutSession]
@@ -81,6 +121,7 @@ private struct TodayView: View {
     @State private var quickTodoValidationMessage: String?
     @State private var todoToEdit: DailyTodo?
     @State private var todoDeletionCandidate: DailyTodo?
+    @State private var completionRecords: [CompletionRecord] = []
 
     private let calendar = Calendar.current
 
@@ -139,45 +180,13 @@ private struct TodayView: View {
         )
     }
 
-    private var completedTaskIDs: Set<UUID> {
-        Set(
-            todayRecords
-                .filter { $0.state == .complete }
-                .map(\.taskId)
-        )
-    }
-
-    private var skippedTaskIDs: Set<UUID> {
-        Set(
-            todayRecords
-                .filter { $0.state == .skipped }
-                .map(\.taskId)
-        )
-    }
-
-    private var todayRecords: [CompletionRecord] {
+    private var todayCompletionProjection: TodayCompletionProjection {
         let ignoredRecordIDs = GoalkeepingRestDay.ignoredRecordIDs()
-        return completionRecords.filter {
+        let records = completionRecords.filter {
             calendar.isDate($0.date, inSameDayAs: today)
                 && !ignoredRecordIDs.contains($0.id)
         }
-    }
-
-    private var todayProgressCompletion: ProgressDayCompletion {
-        HistoricalDayProgress.completion(
-            scheduledTaskIDs: topLevelTasks.map(\.id),
-            childTaskIDsByParent: DaySnapshotService.childTaskIDsByParent(for: topLevelTasks),
-            records: todayRecords
-        )
-    }
-
-    private var completedTopLevelTaskCount: Int {
-        todayProgressCompletion.completedCount
-    }
-
-    private var progress: Double {
-        guard todayProgressCompletion.scheduledCount > 0 else { return 0 }
-        return Double(completedTopLevelTaskCount) / Double(todayProgressCompletion.scheduledCount)
+        return TodayCompletionProjection(records: records, tasks: topLevelTasks)
     }
 
     private var dueTodayAssignments: [Assignment] {
@@ -205,10 +214,12 @@ private struct TodayView: View {
     }
 
     var body: some View {
+        let completionProjection = todayCompletionProjection
+
         NavigationStack {
             List {
                 SwiftUI.Section {
-                    todayHero
+                    todayHero(completionProjection)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(
                             top: LWSpace.xs,
@@ -228,7 +239,7 @@ private struct TodayView: View {
                     savedMealsSection
                 }
 
-                routinePhaseSections
+                routinePhaseSections(completionProjection)
             }
             .trainingLogList()
             .listRowBackground(TrainingLogTheme.background)
@@ -352,19 +363,26 @@ private struct TodayView: View {
                 if !RoutineDaySelection.hasSavedSelection() {
                     RoutineDaySelection.select(routineDay, calendar: calendar)
                 }
+                refreshCompletionRecords()
                 _ = captureTodayIfNeeded()
                 collapseFinishedPhases()
                 updateRolloverConfirmation()
             }
-            .onChange(of: completedTaskIDs) { _, _ in
-                collapseFinishedPhases()
+            .onChange(of: completionProjection.completedTaskIDs) { _, _ in
+                collapseFinishedPhases(using: completionProjection)
             }
             .onChange(of: today) { _, _ in
                 collapsedPhases.removeAll()
                 manuallyExpandedCompletedPhases.removeAll()
                 expandedLiftParentIDs.removeAll()
+                refreshCompletionRecords()
                 _ = captureTodayIfNeeded()
                 collapseFinishedPhases()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    refreshCompletionRecords()
+                }
             }
             .onChange(of: currentTime) { _, _ in
                 updateRolloverConfirmation()
@@ -381,13 +399,16 @@ private struct TodayView: View {
 
     /// The next thing to actually do — first scheduled task that is neither
     /// complete nor skipped, in routine order.
-    private var nextTask: TaskItem? {
-        topLevelTasks.first { !isTaskComplete($0) && !isTaskSkipped($0) }
+    private func nextTask(_ projection: TodayCompletionProjection) -> TaskItem? {
+        topLevelTasks.first {
+            !isTaskComplete($0, projection: projection)
+                && !isTaskSkipped($0, skippedIDs: projection.skippedTaskIDs)
+        }
     }
 
     /// Screen header. Progress is the point of this app, so it gets real estate:
     /// date, a large ring, and the next task promoted above the fold.
-    private var todayHero: some View {
+    private func todayHero(_ projection: TodayCompletionProjection) -> some View {
         VStack(alignment: .leading, spacing: LWSpace.md) {
             HStack(alignment: .center, spacing: LWSpace.lg) {
                 VStack(alignment: .leading, spacing: LWSpace.xxs) {
@@ -399,7 +420,7 @@ private struct TodayView: View {
                         .font(LWFont.callout)
                         .foregroundStyle(LWColor.inkSecondary)
 
-                    Text("\(completedTopLevelTaskCount) of \(todayProgressCompletion.scheduledCount) complete")
+                    Text("\(projection.progress.completedCount) of \(projection.progress.scheduledCount) complete")
                         .font(LWFont.caption)
                         .monospacedDigit()
                         .foregroundStyle(LWColor.inkSecondary)
@@ -409,15 +430,15 @@ private struct TodayView: View {
                 Spacer(minLength: LWSpace.sm)
 
                 LWProgressRing(
-                    progress: progress,
+                    progress: projection.progress.percentage,
                     size: 92,
                     isPulsing: completionRingPulsing
                 )
                 .accessibilityLabel("Today's progress")
-                .accessibilityValue("\(completedTopLevelTaskCount) of \(todayProgressCompletion.scheduledCount) top-level tasks completed")
+                .accessibilityValue("\(projection.progress.completedCount) of \(projection.progress.scheduledCount) top-level tasks completed")
             }
 
-            if let nextTask {
+            if let nextTask = nextTask(projection) {
                 Divider().overlay(LWColor.hairline)
 
                 VStack(alignment: .leading, spacing: LWSpace.xxs) {
@@ -622,21 +643,21 @@ private struct TodayView: View {
         }
     }
 
-    private var routinePhaseSections: some View {
+    private func routinePhaseSections(_ projection: TodayCompletionProjection) -> some View {
         ForEach(RoutineDayPhase.allCases) { phase in
             let phaseTasks = routineTasks(in: phase)
             if !phaseTasks.isEmpty {
                 SwiftUI.Section {
                     if !isPhaseCollapsed(phase) {
                         ForEach(phaseTasks) { task in
-                            if !shouldHide(task) {
+                            if !shouldHide(task, projection: projection) {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    taskRow(task, isSubstep: false)
+                                    taskRow(task, isSubstep: false, projection: projection)
 
                                     if expandedLiftParentIDs.contains(task.id) {
                                         ForEach(children(of: task)) { child in
-                                            if !shouldHide(child) {
-                                                taskRow(child, isSubstep: true)
+                                            if !shouldHide(child, projection: projection) {
+                                                taskRow(child, isSubstep: true, projection: projection)
                                                     .padding(.leading, 28)
                                             }
                                         }
@@ -647,7 +668,7 @@ private struct TodayView: View {
                         }
                     }
                 } header: {
-                    phaseSectionHeader(phase, tasks: phaseTasks)
+                    phaseSectionHeader(phase, tasks: phaseTasks, projection: projection)
                 }
             }
         }
@@ -672,7 +693,7 @@ private struct TodayView: View {
                 assignment.updatedAt = Date()
                 do {
                     try modelContext.save()
-                    WidgetTimeline.reloadAll()
+                    WidgetTimeline.reloadAssignments()
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 } catch {
                     modelContext.rollback()
@@ -687,16 +708,22 @@ private struct TodayView: View {
         .trainingLogRow()
     }
 
-    private func phaseSectionHeader(_ phase: RoutineDayPhase, tasks: [TaskItem]) -> some View {
+    private func phaseSectionHeader(
+        _ phase: RoutineDayPhase,
+        tasks: [TaskItem],
+        projection: TodayCompletionProjection
+    ) -> some View {
         let phaseLabel = RoutinePhasePreferences.label(for: phase)
         let startGuidance = RoutinePhasePreferences.startGuidance(for: phase)
         let guidanceText = startGuidance.map { "From \($0)" } ?? "Flexible"
-        let completed = tasks.filter { isTaskComplete($0) }.count
+        let completed = tasks.filter {
+            isTaskComplete($0, projection: projection)
+        }.count
 
         return Button {
             if collapsedPhases.contains(phase) {
                 collapsedPhases.remove(phase)
-                if isPhaseComplete(phase) {
+                if isPhaseComplete(phase, projection: projection) {
                     manuallyExpandedCompletedPhases.insert(phase)
                 }
             } else {
@@ -777,14 +804,13 @@ private struct TodayView: View {
             .filter { $0.routinePhase == phase }
     }
 
-    private func isPhaseComplete(_ phase: RoutineDayPhase) -> Bool {
-        isPhaseComplete(phase, completedIDs: completedTaskIDs)
-    }
-
-    private func isPhaseComplete(_ phase: RoutineDayPhase, completedIDs: Set<UUID>) -> Bool {
+    private func isPhaseComplete(
+        _ phase: RoutineDayPhase,
+        projection: TodayCompletionProjection
+    ) -> Bool {
         let phaseTasks = routineTasks(in: phase)
         return !phaseTasks.isEmpty && phaseTasks.allSatisfy {
-            isTaskComplete($0, completedIDs: completedIDs)
+            isTaskComplete($0, projection: projection)
         }
     }
 
@@ -792,8 +818,11 @@ private struct TodayView: View {
         collapsedPhases.contains(phase)
     }
 
-    private func shouldHide(_ task: TaskItem) -> Bool {
-        hideCompleted && isTaskComplete(task)
+    private func shouldHide(
+        _ task: TaskItem,
+        projection: TodayCompletionProjection
+    ) -> Bool {
+        hideCompleted && isTaskComplete(task, projection: projection)
     }
 
     /// Current-time marker. An accent rule with the actual time, rather than a
@@ -818,10 +847,14 @@ private struct TodayView: View {
         .accessibilityLabel("Now. Upcoming tasks follow")
     }
 
-    private func taskRow(_ task: TaskItem, isSubstep: Bool) -> some View {
+    private func taskRow(
+        _ task: TaskItem,
+        isSubstep: Bool,
+        projection: TodayCompletionProjection
+    ) -> some View {
         let isParentSummary = !isSubstep && !children(of: task).isEmpty
-        let isCompleted = isTaskComplete(task)
-        let isSkipped = isTaskSkipped(task)
+        let isCompleted = isTaskComplete(task, projection: projection)
+        let isSkipped = isTaskSkipped(task, skippedIDs: projection.skippedTaskIDs)
 
         let state: LWTaskState = {
             if isSkipped { return .skipped }
@@ -871,19 +904,19 @@ private struct TodayView: View {
                 label
                     .trainingLogRow()
                     .contentShape(Rectangle())
-                    .gesture(parentControlGesture(for: task))
+                    .gesture(parentControlGesture(for: task, projection: projection))
                     .animation(LWMotion.toggle, value: isCompleted)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("\(task.title), \(isSkipped ? "Skipped" : (isCompleted ? "Completed from sub-steps" : "Sub-steps incomplete"))")
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        skipAction(for: task, isSkipped: isSkipped)
+                        skipAction(for: task, isSkipped: isSkipped, projection: projection)
                     }
             )
         }
 
         return AnyView(
             Button {
-                toggleCompletion(for: task)
+                toggleCompletion(for: task, projection: projection)
             } label: {
                 label
             }
@@ -894,15 +927,19 @@ private struct TodayView: View {
             .accessibilityHint("Double tap to \(isCompleted ? "mark incomplete" : "mark complete")")
             .animation(LWMotion.toggle, value: isCompleted)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                skipAction(for: task, isSkipped: isSkipped)
+                skipAction(for: task, isSkipped: isSkipped, projection: projection)
             }
         )
     }
 
     @ViewBuilder
-    private func skipAction(for task: TaskItem, isSkipped: Bool) -> some View {
+    private func skipAction(
+        for task: TaskItem,
+        isSkipped: Bool,
+        projection: TodayCompletionProjection
+    ) -> some View {
         Button {
-            toggleSkip(for: task)
+            toggleSkip(for: task, projection: projection)
         } label: {
             Label(isSkipped ? "Unskip" : "Skip", systemImage: isSkipped ? "arrow.uturn.backward" : "forward.fill")
         }
@@ -910,15 +947,22 @@ private struct TodayView: View {
         .accessibilityLabel(isSkipped ? "Unskip \(task.title)" : "Skip \(task.title)")
     }
 
-    private func toggleCompletion(for task: TaskItem) {
+    private func toggleCompletion(
+        for task: TaskItem,
+        projection: TodayCompletionProjection
+    ) {
         applyCompletionChange(
             taskIDs: Set([task.id]).union(task.parent.map { [$0.id] } ?? []),
-            shouldComplete: !completedTaskIDs.contains(task.id),
-            completionTaskIDs: Set([task.id])
+            shouldComplete: !projection.completedTaskIDs.contains(task.id),
+            completionTaskIDs: Set([task.id]),
+            beforeProjection: projection
         )
     }
 
-    private func toggleSkip(for task: TaskItem) {
+    private func toggleSkip(
+        for task: TaskItem,
+        projection: TodayCompletionProjection
+    ) {
         let activeChildren = children(of: task)
         let taskIDs: Set<UUID>
         let recordTaskIDs: Set<UUID>
@@ -933,25 +977,33 @@ private struct TodayView: View {
             taskIDs: taskIDs,
             shouldComplete: false,
             completionTaskIDs: recordTaskIDs,
-            recordState: isTaskSkipped(task) ? nil : .skipped
+            recordState: isTaskSkipped(task, skippedIDs: projection.skippedTaskIDs) ? nil : .skipped,
+            beforeProjection: projection
         )
     }
 
-    private func toggleLiftParentCompletion(for parent: TaskItem) {
+    private func toggleLiftParentCompletion(
+        for parent: TaskItem,
+        projection: TodayCompletionProjection
+    ) {
         let activeChildren = children(of: parent)
         guard !activeChildren.isEmpty else {
-            toggleCompletion(for: parent)
+            toggleCompletion(for: parent, projection: projection)
             return
         }
 
         applyCompletionChange(
             taskIDs: Set(activeChildren.map(\.id)).union([parent.id]),
-            shouldComplete: !isTaskComplete(parent),
-            completionTaskIDs: Set(activeChildren.map(\.id))
+            shouldComplete: !isTaskComplete(parent, projection: projection),
+            completionTaskIDs: Set(activeChildren.map(\.id)),
+            beforeProjection: projection
         )
     }
 
-    private func parentControlGesture(for task: TaskItem) -> some Gesture {
+    private func parentControlGesture(
+        for task: TaskItem,
+        projection: TodayCompletionProjection
+    ) -> some Gesture {
         LongPressGesture(minimumDuration: 0.45)
             .exclusively(before: TapGesture())
             .onEnded { value in
@@ -965,7 +1017,7 @@ private struct TodayView: View {
                         }
                     }
                 case .second:
-                    toggleLiftParentCompletion(for: task)
+                    toggleLiftParentCompletion(for: task, projection: projection)
                 }
             }
     }
@@ -974,7 +1026,8 @@ private struct TodayView: View {
         taskIDs: Set<UUID>,
         shouldComplete: Bool,
         completionTaskIDs: Set<UUID>? = nil,
-        recordState: CompletionRecordState? = nil
+        recordState: CompletionRecordState? = nil,
+        beforeProjection: TodayCompletionProjection
     ) {
         let recordTaskIDs = completionTaskIDs ?? taskIDs
         guard !isSavingCompletion else { return }
@@ -985,25 +1038,23 @@ private struct TodayView: View {
             taskIDs.contains($0.taskId) && calendar.isDate($0.date, inSameDayAs: today)
         }
         let snapshots = matchingRecords.map(CompletionRecordSnapshot.init)
-        let beforeCompletedIDs = completedTaskIDs
         let resultingState = shouldComplete ? CompletionRecordState.complete : recordState
-
-        var projectedCompletedIDs = beforeCompletedIDs
-        if shouldComplete {
-            projectedCompletedIDs.formUnion(recordTaskIDs)
-        } else {
-            projectedCompletedIDs.subtract(taskIDs)
-        }
+        let projectedProjection = beforeProjection.projecting(
+            removing: taskIDs,
+            setting: recordTaskIDs,
+            to: resultingState,
+            tasks: topLevelTasks
+        )
 
         let completedPhases = RoutineDayPhase.allCases.filter {
-            !isPhaseComplete($0, completedIDs: beforeCompletedIDs)
-                && isPhaseComplete($0, completedIDs: projectedCompletedIDs)
+            !isPhaseComplete($0, projection: beforeProjection)
+                && isPhaseComplete($0, projection: projectedProjection)
         }
         let completesFinalTopLevelTask = shouldComplete
             && !topLevelTasks.isEmpty
-            && completedTopLevelTaskCount < todayProgressCompletion.scheduledCount
+            && beforeProjection.progress.completedCount < beforeProjection.progress.scheduledCount
             && topLevelTasks.allSatisfy {
-                TaskCompletion.isComplete($0, completedTaskIDs: projectedCompletedIDs)
+                isTaskComplete($0, projection: projectedProjection)
             }
 
         do {
@@ -1021,11 +1072,12 @@ private struct TodayView: View {
                 collapsedPhases.formUnion(completedPhases)
                 if !shouldComplete {
                     collapsedPhases.subtract(RoutineDayPhase.allCases.filter {
-                        !isPhaseComplete($0, completedIDs: projectedCompletedIDs)
+                        !isPhaseComplete($0, projection: projectedProjection)
                     })
                 }
             }
 
+            refreshCompletionRecords()
             showUndo(snapshots: snapshots, taskIDs: taskIDs)
             if shouldComplete {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -1120,9 +1172,12 @@ private struct TodayView: View {
         } ?? []
     }
 
-    private func collapseFinishedPhases() {
+    private func collapseFinishedPhases(
+        using suppliedProjection: TodayCompletionProjection? = nil
+    ) {
+        let projection = suppliedProjection ?? todayCompletionProjection
         let completedPhases = Set(RoutineDayPhase.allCases.filter {
-            isPhaseComplete($0)
+            isPhaseComplete($0, projection: projection)
         })
         manuallyExpandedCompletedPhases.formIntersection(completedPhases)
         collapsedPhases.formUnion(
@@ -1133,23 +1188,42 @@ private struct TodayView: View {
         )
     }
 
-    private func isTaskSkipped(_ task: TaskItem) -> Bool {
-        if skippedTaskIDs.contains(task.id) {
+    private func isTaskSkipped(_ task: TaskItem, skippedIDs: Set<UUID>) -> Bool {
+        if skippedIDs.contains(task.id) {
             return true
         }
         let activeChildren = children(of: task)
-        return !activeChildren.isEmpty && activeChildren.allSatisfy { skippedTaskIDs.contains($0.id) }
+        return !activeChildren.isEmpty && activeChildren.allSatisfy {
+            skippedIDs.contains($0.id)
+        }
     }
 
-    private func isTaskComplete(_ task: TaskItem, completedIDs: Set<UUID>? = nil) -> Bool {
-        if let completedIDs {
-            return TaskCompletion.isComplete(task, completedTaskIDs: completedIDs)
+    private func isTaskComplete(
+        _ task: TaskItem,
+        projection: TodayCompletionProjection
+    ) -> Bool {
+        HistoricalDayProgress.isTaskComplete(
+            taskID: task.id,
+            childTaskIDs: children(of: task).map(\.id),
+            states: projection.statesByTaskID
+        )
+    }
+
+    private func refreshCompletionRecords() {
+        let start = today
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else {
+            completionRecords = []
+            return
         }
-        return HistoricalDayProgress.completion(
-            scheduledTaskIDs: [task.id],
-            childTaskIDsByParent: DaySnapshotService.childTaskIDsByParent(for: [task]),
-            records: todayRecords
-        ).isComplete
+        let descriptor = FetchDescriptor<CompletionRecord>(
+            predicate: #Predicate { $0.date >= start && $0.date < end },
+            sortBy: [SortDescriptor(\.completedAt)]
+        )
+        do {
+            completionRecords = try modelContext.fetch(descriptor)
+        } catch {
+            saveErrorMessage = error.localizedDescription
+        }
     }
 
     private func captureTodayIfNeeded() -> Bool {
@@ -1191,7 +1265,7 @@ private struct TodayView: View {
         routineDay = newDay
         showingRolloverConfirmation = false
         undoState = nil
-        WidgetTimeline.reloadAll()
+        WidgetTimeline.reloadRoutine()
     }
 
     private func setGoalkeepingRestDay(_ isRestDay: Bool) {
@@ -1207,6 +1281,7 @@ private struct TodayView: View {
                 in: modelContext,
                 calendar: calendar
             )
+            refreshCompletionRecords()
             goalkeepingRestDayRevision += 1
             collapseFinishedPhases()
         } catch {
@@ -1241,11 +1316,13 @@ private struct TodayView: View {
 
         do {
             try modelContext.save()
-            WidgetTimeline.reloadAll()
+            WidgetTimeline.reloadRoutine()
+            refreshCompletionRecords()
+            let projection = todayCompletionProjection
             withAnimation(.snappy) {
                 undoState = nil
                 collapsedPhases.subtract(RoutineDayPhase.allCases.filter {
-                    !isPhaseComplete($0)
+                    !isPhaseComplete($0, projection: projection)
                 })
             }
         } catch {

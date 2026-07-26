@@ -163,7 +163,7 @@ struct ManageView: View {
     private func saveChanges() {
         do {
             try modelContext.save()
-            WidgetTimeline.reloadAll()
+            WidgetTimeline.reloadRoutine()
         } catch {
             modelContext.rollback()
             saveErrorMessage = error.localizedDescription
@@ -514,7 +514,7 @@ private struct TaskEditorView: View {
 
         do {
             try modelContext.save()
-            WidgetTimeline.reloadAll()
+            WidgetTimeline.reloadRoutine()
             dismiss()
         } catch {
             modelContext.rollback()
@@ -537,7 +537,7 @@ private struct TaskEditorView: View {
     private func saveAndDismiss() {
         do {
             try modelContext.save()
-            WidgetTimeline.reloadAll()
+            WidgetTimeline.reloadRoutine()
             dismiss()
         } catch {
             modelContext.rollback()
