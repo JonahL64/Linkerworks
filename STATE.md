@@ -251,6 +251,11 @@ Blank or whitespace-only titles still render as `WORKOUT IN PROGRESS`; nonblank 
 No workout models, persistence, or UI behavior beyond resolving the compile error changed.
 Validation passed: `swiftc -parse Linkerworks/ContentView.swift` and `git diff --check`.
 
+Compile repair: `WidgetRoutineSortKey` in `Linkerworks/Domain.swift` now parses optional time components with explicit optional binding.
+This replaces nested `Optional.flatMap` calls whose inferred generic result was ambiguous to Xcode.
+Valid `HH:mm` values retain the same date parsing and ordering behavior; malformed or missing times remain untimed.
+No widget, task, snapshot, or persistence behavior changed.
+
 Nutrition quick-log follow-up changed `NutritionView.swift` and `ContentView.swift` only; no model schema changed.
 Add Meal now exposes a visible Save as favorite toggle, while the existing star on logged meals remains available.
 Tapping a saved favorite or Recent meal now opens a Log Meal category picker for the selected date instead of silently using the preset/history category.

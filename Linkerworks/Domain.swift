@@ -24,11 +24,13 @@ struct WidgetRoutineSortKey: Comparable {
         let parts = timeText?.split(separator: ":", omittingEmptySubsequences: false) ?? []
         let hour = parts.count == 2 ? Int(parts[0]) : nil
         let minute = parts.count == 2 ? Int(parts[1]) : nil
-        let parsed = hour.flatMap { hour in
-            minute.flatMap { minute in
-                guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
-                return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date)
-            }
+        let parsed: Date?
+        if let hour, let minute,
+           (0...23).contains(hour),
+           (0...59).contains(minute) {
+            parsed = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date)
+        } else {
+            parsed = nil
         }
         time = parsed
         category = parsed == nil ? 2 : (parsed! < now ? 0 : 1)
