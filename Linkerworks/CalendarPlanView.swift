@@ -7,6 +7,7 @@ struct CalendarPlanView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CalendarEvent.date) private var events: [CalendarEvent]
     @Query private var assignments: [Assignment]
+    @Query(sort: \Certification.name) private var certifications: [Certification]
     @AppStorage("homeworkIntegrationEnabled") private var homeworkIntegrationEnabled = true
 
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
@@ -129,7 +130,8 @@ struct CalendarPlanView: View {
                                 isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
                                 isToday: calendar.isDateInToday(date),
                                 hasEvents: !events(on: date).isEmpty,
-                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date).isEmpty
+                                hasAssignments: homeworkIntegrationEnabled && !assignments(on: date).isEmpty,
+                                hasCertificationExam: !certifications(on: date).isEmpty
                             )
                         }
                         .buttonStyle(.plain)
@@ -221,6 +223,13 @@ struct CalendarPlanView: View {
         )
     }
 
+    private func certifications(on date: Date) -> [Certification] {
+        certifications.filter { certification in
+            guard let targetDate = certification.targetDate else { return false }
+            return calendar.isDate(targetDate, inSameDayAs: date)
+        }
+    }
+
     private func select(_ date: Date) {
         selectedDate = calendar.startOfDay(for: date)
         displayedMonth = calendar.dateInterval(of: .month, for: date)?.start ?? date
@@ -304,6 +313,7 @@ private struct CalendarDayCell: View {
     let isToday: Bool
     let hasEvents: Bool
     let hasAssignments: Bool
+    let hasCertificationExam: Bool
 
     var body: some View {
         VStack(spacing: 3) {
@@ -316,6 +326,9 @@ private struct CalendarDayCell: View {
                 RoundedRectangle(cornerRadius: 1)
                     .fill(hasAssignments ? TrainingLogTheme.completionAccent : .clear)
                     .frame(width: 7, height: 3)
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 7))
+                    .foregroundStyle(hasCertificationExam ? .orange : .clear)
             }
         }
         .foregroundStyle(isSelected ? TrainingLogTheme.background : TrainingLogTheme.primaryText)
@@ -334,7 +347,7 @@ private struct CalendarDayCell: View {
             }
         }
         .accessibilityLabel(date.formatted(date: .long, time: .omitted))
-        .accessibilityValue(hasEvents || hasAssignments ? "\(hasEvents ? "Has events" : "")\(hasEvents && hasAssignments ? ", " : "")\(hasAssignments ? "Has assignments due" : "")" : "Nothing scheduled")
+        .accessibilityValue(hasEvents || hasAssignments || hasCertificationExam ? "\(hasEvents ? "Has events" : "")\(hasEvents && (hasAssignments || hasCertificationExam) ? ", " : "")\(hasAssignments ? "Has assignments due" : "")\(hasAssignments && hasCertificationExam ? ", " : "")\(hasCertificationExam ? "Certification exam" : "")" : "Nothing scheduled")
     }
 }
 

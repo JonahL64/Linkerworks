@@ -34,7 +34,11 @@ struct TrackersView: View {
                 SwiftUI.Section {
                     ForEach(Domain.allCases.filter { $0 != .eating && $0 != .lifting }) { domain in
                         NavigationLink {
-                            DomainTrackerView(domain: domain)
+                            if domain == .certifications {
+                                CertificationsTrackerView()
+                            } else {
+                                DomainTrackerView(domain: domain)
+                            }
                         } label: {
                             Label(domain.displayName, systemImage: domain.symbolName)
                                 .foregroundStyle(TrainingLogTheme.primaryText)
@@ -72,8 +76,14 @@ private struct LogDestinationRow: View {
     }
 }
 
-private struct DomainTrackerView: View {
+struct DomainTrackerView: View {
     let domain: Domain
+    let leadingContent: AnyView?
+
+    init(domain: Domain, leadingContent: AnyView? = nil) {
+        self.domain = domain
+        self.leadingContent = leadingContent
+    }
 
     @Query(sort: \TaskItem.title) private var tasks: [TaskItem]
     @Query(sort: \CompletionRecord.completedAt, order: .reverse)
@@ -126,6 +136,9 @@ private struct DomainTrackerView: View {
 
     var body: some View {
         List {
+            if let leadingContent {
+                leadingContent
+            }
             completionHistory
 
             if domain == .eating {
@@ -382,7 +395,7 @@ private extension Array where Element == ReferenceValue {
     }
 }
 
-private extension Domain {
+extension Domain {
     var symbolName: String {
         switch self {
         case .sleep: "bed.double"
@@ -391,6 +404,7 @@ private extension Domain {
         case .lifting: "dumbbell"
         case .posture: "figure.stand"
         case .grooming: "scissors"
+        case .certifications: "checkmark.seal"
         }
     }
 }

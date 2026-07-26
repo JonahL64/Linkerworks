@@ -220,3 +220,12 @@ When off, Homework is hidden from Today’s DUE TODAY strip and from Plan’s Ho
 Routine task progress, snapshots, streaks, and heatmap behavior remain unchanged.
 Full Xcode build and interaction verification are still required because this Windows host lacks Swift tooling.
 `HomeworkCoreTests` now toggles `homeworkIntegrationEnabled` both off and on and asserts byte-identical routine completion output in each case; this covers the same routine-only input used by snapshots, streaks, and heatmap.
+
+Sprint 5 Certifications added `.certifications` to `Linkerworks/Domain.swift`; CaseIterable now carries it through Manage Routine and Log without picker/list special cases.
+`Linkerworks/Models.swift` defines additive SwiftData `Certification` and cascade-owned `CertMilestone` models, registered in the shared App Group schema by `Linkerworks/SharedModelContainer.swift`.
+`Linkerworks/CertificationViews.swift` composes certificate rows above the un-forked `DomainTrackerView` body, with status/dates/notes, ordered milestones, linked Certifications-domain routine tasks, and a trailing-30-day complete-record count.
+Certification study remains solely `CompletionRecord` data: no certification completion, streak, heatmap, snapshot, or tracker calculation was added or changed.
+`Linkerworks/CalendarPlanView.swift` derives a noninteractive orange checkmark-seal marker directly from certification target dates; it never creates a CalendarEvent.
+`LinkerworksTests/CertificationTests.swift` covers inclusive expiry, countdown/no-date, milestone progress, and complete-only rolling study counts.
+Validation is blocked on this Windows host: `swiftc` and Git are unavailable, so Xcode must build the SwiftData migration, run tests, and verify the creation/linking, heatmap parity, and Plan marker UI.
+Review follow-up: milestone add/toggle operations now roll back and show an error when SwiftData cannot save; rolling 30-day records normalize to local days before filtering.

@@ -9,6 +9,8 @@ enum SharedModelContainer {
         Course.self,
         Assignment.self,
         CalendarEvent.self,
+        Certification.self,
+        CertMilestone.self,
         TaskItem.self,
         Section.self,
         DaySchedule.self,

@@ -8,6 +8,7 @@ enum Domain: String, Codable, CaseIterable, Identifiable, Sendable {
     case lifting
     case posture
     case grooming
+    case certifications
 
     var id: String { rawValue }
 
@@ -19,6 +20,7 @@ enum Domain: String, Codable, CaseIterable, Identifiable, Sendable {
         case .lifting: "Lifting"
         case .posture: "Posture"
         case .grooming: "Grooming"
+        case .certifications: "Certifications"
         }
     }
 

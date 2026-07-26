@@ -292,6 +292,51 @@ final class CompletionRecord {
     }
 }
 
+@Model
+final class Certification {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var targetDate: Date?
+    var status: String
+    var expiresOn: Date?
+    var linkedTaskID: UUID?
+    var notes: String?
+
+    @Relationship(deleteRule: .cascade)
+    var milestones: [CertMilestone]
+
+    init(
+        id: UUID = UUID(), name: String, targetDate: Date? = nil,
+        status: String = "planned", expiresOn: Date? = nil,
+        linkedTaskID: UUID? = nil, notes: String? = nil,
+        milestones: [CertMilestone] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.targetDate = targetDate
+        self.status = status
+        self.expiresOn = expiresOn
+        self.linkedTaskID = linkedTaskID
+        self.notes = notes
+        self.milestones = milestones
+    }
+}
+
+@Model
+final class CertMilestone {
+    var title: String
+    var isDone: Bool
+    var completedAt: Date?
+    var sortOrder: Int
+
+    init(title: String, isDone: Bool = false, completedAt: Date? = nil, sortOrder: Int) {
+        self.title = title
+        self.isDone = isDone
+        self.completedAt = isDone ? (completedAt ?? Date()) : nil
+        self.sortOrder = sortOrder
+    }
+}
+
 /// Immutable record of the routine that was eligible on a calendar day.
 /// `scheduledTaskIDs` contains top-level completion units only.
 @Model
