@@ -960,7 +960,9 @@ private struct ActiveWorkoutBanner: View {
                 Image(systemName: "figure.strengthtraining.traditional")
                     .foregroundStyle(TrainingLogTheme.completionAccent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(workout.title?.nonEmpty ?? "WORKOUT IN PROGRESS")
+                    Text(workout.title?
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .flatMap { $0.isEmpty ? nil : $0 } ?? "WORKOUT IN PROGRESS")
                         .font(.subheadline.weight(.semibold))
                     Text("\(elapsedText(at: context.date))  ·  \(setCount) SETS")
                         .font(.caption)

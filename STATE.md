@@ -238,3 +238,9 @@ Exercise headers show monospaced session volume as sets x reps x load, treating 
 Completed workout detail remains display-only and all existing in-progress mutation guards remain in place; `WorkoutSession.inProgressKey` remains the sole one-active-session persistence invariant.
 Validation passed: `swiftc -parse Linkerworks/ContentView.swift Linkerworks/WorkoutView.swift` and `git diff --check`.
 Runtime verification remains required in Xcode/device or Simulator because this host cannot run the iOS app; confirm keyboard Return behavior, timer updates, resume after relaunch, clone state, and completed-history read-only behavior there.
+
+Sprint 6 compile repair changed `Linkerworks/ContentView.swift` only.
+`ActiveWorkoutBanner` now trims the optional title locally instead of accessing `String.nonEmpty`, which is fileprivate to `WorkoutView.swift`.
+This fixes the Xcode access-control error at the Today resume banner without broadening helper visibility.
+No workout persistence, session state, UI behavior, or schema changed.
+Validation will cover Swift source parsing and whitespace checks; full Xcode compilation remains required on macOS.
