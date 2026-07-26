@@ -199,93 +199,14 @@ private struct TodayView: View {
                 }
 
                 if homeworkIntegrationEnabled && (!dueTodayAssignments.isEmpty || overdueAssignmentCount > 0) {
-                    SwiftUI.Section {
-                        NavigationLink {
-                            HomeworkView()
-                        } label: {
-                            HStack {
-                                Text("DUE TODAY")
-                                    .font(.caption.weight(.bold))
-                                    .tracking(1.1)
-                                Spacer()
-                                if overdueAssignmentCount > 0 {
-                                    Text("\(overdueAssignmentCount) overdue")
-                                        .font(.caption.weight(.medium))
-                                        .foregroundStyle(TrainingLogTheme.completionAccent)
-                                }
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(TrainingLogTheme.secondaryText)
-                            }
-                        }
-                        .buttonStyle(.plain)
-
-                        ForEach(dueTodayAssignments.prefix(3)) { assignment in
-                            dueTodayAssignmentRow(assignment)
-                        }
-                        if dueTodayAssignments.count > 3 {
-                            Text("+\(dueTodayAssignments.count - 3) more due today")
-                                .font(.caption)
-                                .foregroundStyle(TrainingLogTheme.secondaryText)
-                        }
-                    }
+                    dueTodaySection
                 }
 
                 if !savedMeals.isEmpty {
-                    SwiftUI.Section("EATING") {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                ForEach(Array(savedMeals.prefix(4))) { meal in
-                                    Button { favoriteAwaitingCategory = meal } label: {
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            Text(meal.foodName).lineLimit(1)
-                                            Text("\(meal.calories) kcal · \(meal.mealCategory.displayName)")
-                                                .font(.caption).monospacedDigit()
-                                                .foregroundStyle(TrainingLogTheme.secondaryText)
-                                        }
-                                        .frame(width: 145, alignment: .leading)
-                                        .padding(10)
-                                        .background(TrainingLogTheme.quietFill, in: RoundedRectangle(cornerRadius: 8))
-                                    }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel("Log \(meal.foodName)")
-                                }
-                            }
-                        }
-                        .padding(.vertical, 3)
-                    }
+                    savedMealsSection
                 }
 
-                ForEach(RoutineDayPhase.allCases) { phase in
-                    ForEach(todaySections) { section in
-                        let phaseTasks = tasks(in: section).filter { $0.routinePhase == phase }
-                        if !phaseTasks.isEmpty {
-                            SwiftUI.Section {
-                                if !isSectionCollapsed(section) {
-                                    ForEach(phaseTasks) { task in
-                                if !shouldHide(task) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        taskRow(task, isSubstep: false)
-
-                                        if expandedLiftParentIDs.contains(task.id) {
-                                            ForEach(children(of: task)) { child in
-                                                if !shouldHide(child) {
-                                                    taskRow(child, isSubstep: true)
-                                                        .padding(.leading, 28)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .padding(.vertical, 4)
-                                }
-                                    }
-                                }
-                            } header: {
-                                phaseSectionHeader(phase, section: section)
-                            }
-                        }
-                    }
-                }
+                routinePhaseSections
             }
             .trainingLogList()
             .listRowBackground(TrainingLogTheme.background)
@@ -392,6 +313,97 @@ private struct TodayView: View {
                 }
             }
             .trainingLogNavigation()
+        }
+    }
+
+    private var dueTodaySection: some View {
+        SwiftUI.Section {
+            NavigationLink {
+                HomeworkView()
+            } label: {
+                HStack {
+                    Text("DUE TODAY")
+                        .font(.caption.weight(.bold))
+                        .tracking(1.1)
+                    Spacer()
+                    if overdueAssignmentCount > 0 {
+                        Text("\(overdueAssignmentCount) overdue")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(TrainingLogTheme.completionAccent)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(TrainingLogTheme.secondaryText)
+                }
+            }
+            .buttonStyle(.plain)
+
+            ForEach(dueTodayAssignments.prefix(3)) { assignment in
+                dueTodayAssignmentRow(assignment)
+            }
+            if dueTodayAssignments.count > 3 {
+                Text("+\(dueTodayAssignments.count - 3) more due today")
+                    .font(.caption)
+                    .foregroundStyle(TrainingLogTheme.secondaryText)
+            }
+        }
+    }
+
+    private var savedMealsSection: some View {
+        SwiftUI.Section("EATING") {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(Array(savedMeals.prefix(4))) { meal in
+                        Button { favoriteAwaitingCategory = meal } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(meal.foodName).lineLimit(1)
+                                Text("\(meal.calories) kcal · \(meal.mealCategory.displayName)")
+                                    .font(.caption).monospacedDigit()
+                                    .foregroundStyle(TrainingLogTheme.secondaryText)
+                            }
+                            .frame(width: 145, alignment: .leading)
+                            .padding(10)
+                            .background(TrainingLogTheme.quietFill, in: RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Log \(meal.foodName)")
+                    }
+                }
+            }
+            .padding(.vertical, 3)
+        }
+    }
+
+    private var routinePhaseSections: some View {
+        ForEach(RoutineDayPhase.allCases) { phase in
+            ForEach(todaySections) { section in
+                let phaseTasks = tasks(in: section).filter { $0.routinePhase == phase }
+                if !phaseTasks.isEmpty {
+                    SwiftUI.Section {
+                        if !isSectionCollapsed(section) {
+                            ForEach(phaseTasks) { task in
+                                if !shouldHide(task) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        taskRow(task, isSubstep: false)
+
+                                        if expandedLiftParentIDs.contains(task.id) {
+                                            ForEach(children(of: task)) { child in
+                                                if !shouldHide(child) {
+                                                    taskRow(child, isSubstep: true)
+                                                        .padding(.leading, 28)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.vertical, 4)
+                                }
+                            }
+                        }
+                    } header: {
+                        phaseSectionHeader(phase, section: section)
+                    }
+                }
+            }
         }
     }
 

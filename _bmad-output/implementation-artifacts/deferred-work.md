@@ -16,3 +16,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-fix-today-phase-guidance-typecheck.md`
   summary: Add Xcode-backed and UI coverage for Today phase-guidance formatting.
   evidence: This host has Command Line Tools only, so the extracted SwiftUI helper cannot be app-target type-checked or visually exercised here.
+- source_spec: `_bmad-output/implementation-artifacts/spec-fix-today-list-builder-typecheck.md`
+  summary: Add Xcode-backed and UI coverage for Today’s extracted homework, meal, and routine list sections.
+  evidence: This host has Command Line Tools only, so the SwiftUI result builders cannot be app-target type-checked or interacted with here.

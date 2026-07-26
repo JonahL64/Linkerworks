@@ -312,3 +312,15 @@ The entire phase header now renders through `phaseSectionHeader(_:section:)`, ra
 The helper computes phase label and guidance text before returning its small `VStack`, reducing the compiler's type-checking scope at the reported line.
 The phase label, “From <guidance>”/“Flexible” text, and section-header control remain unchanged.
 Focused source parsing and diff validation passed; full Xcode compilation still requires macOS Xcode or a Simulator.
+
+Today DUE TODAY compile repair changed `Linkerworks/ContentView.swift` only.
+The conditional DUE TODAY section is now the dedicated `dueTodaySection` view property, leaving the outer Today list builder with one opaque view expression.
+Its Homework route, overdue count, first-three assignment rows, and remaining-count copy are unchanged.
+This reduces the type-checking scope around the newly reported Today list-builder expression.
+Focused source parsing and diff validation passed; full Xcode compilation still requires macOS Xcode or a Simulator.
+
+Today builder follow-up further changed `Linkerworks/ContentView.swift` only.
+Saved-meal and routine-phase branches now render through `savedMealsSection` and `routinePhaseSections`, respectively.
+Together with `dueTodaySection`, the outer Today list builder now contains only simple conditional/helper expressions.
+All quick-log, routine task, sub-step, collapse, and phase-header behavior is preserved inside the extracted views.
+Focused source parsing and diff validation passed; full Xcode compilation still requires macOS Xcode or a Simulator.
