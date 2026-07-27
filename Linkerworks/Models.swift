@@ -667,7 +667,7 @@ enum WeightEntrySupport {
         from entries: [WeightEntry],
         calendar: Calendar = .current
     ) -> WeightEntry? {
-        entries(on: date, from: entries, calendar: calendar).first
+        Self.entries(on: date, from: entries, calendar: calendar).first
     }
 
     static func entries(

@@ -435,3 +435,9 @@ No data is fabricated for empty or one-entry histories; charts connect only actu
 `MealEntryEditorView` in `Linkerworks/NutritionView.swift` now replaces the initial detailed-macro zero on the first typed digit.
 `LinkerworksTests/WeightTrackerTests.swift` covers ordering, same-day lookup, normalization, and timezone stability.
 Swift parsing for app/tests and `git diff --check` pass; Xcode build, migration, XCTest, and device UI validation still require full Xcode.
+
+Weight tracker compile repair changed `Linkerworks/Models.swift` only.
+`WeightEntrySupport.entry` now calls `Self.entries(...)`, avoiding its `entries` parameter name collision.
+The helper still returns the deterministic first measurement for the requested calendar day.
+No data model, schema, UI, graph, or macro-entry behavior changed.
+Focused Swift parsing and `git diff --check` pass; full Xcode typecheck/build remains unavailable on this host.
