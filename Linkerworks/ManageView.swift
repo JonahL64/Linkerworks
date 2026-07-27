@@ -4,6 +4,7 @@ import SwiftUI
 struct ManageView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Section.sortOrder) private var sections: [Section]
+    @Query(sort: \TaskItem.sortOrder) private var taskItems: [TaskItem]
 
     @State private var showingArchived = false
     @State private var taskToEdit: TaskItem?
@@ -118,17 +119,7 @@ struct ManageView: View {
     }
 
     private func tasks(in section: Section) -> [TaskItem] {
-        section.tasks
-            .filter {
-                $0.isArchived == showingArchived && !$0.isSubstep && $0.parent == nil
-            }
-            .sorted { lhs, rhs in
-                lhs.routinePhase.sortRank == rhs.routinePhase.sortRank
-                    ? (lhs.sortOrder == rhs.sortOrder
-                        ? lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
-                        : lhs.sortOrder < rhs.sortOrder)
-                    : lhs.routinePhase.sortRank < rhs.routinePhase.sortRank
-            }
+        ManageRoutineProjection.tasks(taskItems, in: section, showingArchived: showingArchived)
     }
 
     private func sectionTitle(for section: Section) -> String {
@@ -171,6 +162,47 @@ struct ManageView: View {
     }
 }
 
+enum ManageRoutineProjection {
+    static func nextSortOrder(
+        _ taskItems: [TaskItem],
+        in section: Section,
+        phase: RoutineDayPhase
+    ) -> Int {
+        (tasks(taskItems, in: section, showingArchived: false)
+            .filter { $0.routinePhase == phase }
+            .map(\.sortOrder)
+            .max() ?? -1) + 1
+    }
+
+    static func tasks(
+        _ taskItems: [TaskItem],
+        in section: Section,
+        showingArchived: Bool
+    ) -> [TaskItem] {
+        taskItems
+            .filter { task in
+                let belongsInSection: Bool
+                if let weekday = section.daySchedule?.weekdayName {
+                    belongsInSection = task.daysOfWeek.contains(weekday)
+                        && (task.section?.id == section.id || task.section?.name == section.name)
+                } else {
+                    belongsInSection = task.section?.id == section.id
+                }
+                return belongsInSection
+                    && task.isArchived == showingArchived
+                    && !task.isSubstep
+                    && task.parent == nil
+            }
+            .sorted { lhs, rhs in
+                lhs.routinePhase.sortRank == rhs.routinePhase.sortRank
+                    ? (lhs.sortOrder == rhs.sortOrder
+                        ? lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+                        : lhs.sortOrder < rhs.sortOrder)
+                    : lhs.routinePhase.sortRank < rhs.routinePhase.sortRank
+            }
+    }
+}
+
 private struct TaskSummaryRow: View {
     let task: TaskItem
 
@@ -201,6 +233,7 @@ private struct TaskSummaryRow: View {
 private struct TaskEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \TaskItem.sortOrder) private var taskItems: [TaskItem]
 
     let task: TaskItem?
     let sections: [Section]
@@ -472,11 +505,11 @@ private struct TaskEditorView: View {
                 title: cleanTitle,
                 routinePhase: routinePhase,
                 detail: detail,
+                section: selectedSection,
                 daysOfWeek: orderedDays,
                 sortOrder: nextSortOrder(in: selectedSection, phase: routinePhase),
                 domain: selectedDomain
             )
-            selectedSection.tasks.append(savedTask)
             modelContext.insert(savedTask)
         }
 
@@ -546,10 +579,7 @@ private struct TaskEditorView: View {
     }
 
     private func nextSortOrder(in section: Section, phase: RoutineDayPhase) -> Int {
-        (section.tasks
-            .filter { !$0.isSubstep && $0.parent == nil && !$0.isArchived && $0.routinePhase == phase }
-            .map(\.sortOrder)
-            .max() ?? -1) + 1
+        ManageRoutineProjection.nextSortOrder(taskItems, in: section, phase: phase)
     }
 
     private func nextSubstepSortOrder(in task: TaskItem) -> Int {
@@ -559,9 +589,7 @@ private struct TaskEditorView: View {
     private func normalizeSortOrders(in section: Section?) {
         guard let section else { return }
 
-        let activeTasks = section.tasks
-            .filter { !$0.isArchived && !$0.isSubstep && $0.parent == nil }
-            .sorted { $0.routinePhase.sortRank == $1.routinePhase.sortRank ? $0.sortOrder < $1.sortOrder : $0.routinePhase.sortRank < $1.routinePhase.sortRank }
+        let activeTasks = ManageRoutineProjection.tasks(taskItems, in: section, showingArchived: false)
         for phase in RoutineDayPhase.allCases {
             for (index, task) in activeTasks.filter({ $0.routinePhase == phase }).enumerated() {
                 task.sortOrder = index

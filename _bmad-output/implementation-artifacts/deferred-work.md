@@ -19,3 +19,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-fix-today-list-builder-typecheck.md`
   summary: Add Xcode-backed and UI coverage for Today’s extracted homework, meal, and routine list sections.
   evidence: This host has Command Line Tools only, so the SwiftUI result builders cannot be app-target type-checked or interacted with here.
+- source_spec: `_bmad-output/implementation-artifacts/spec-fix-multiday-routine-manage.md`
+  summary: Align Today’s section projection with Manage’s same-named multi-day section projection.
+  evidence: Today currently reads each section’s source-owned task relationship, while this scoped Manage repair reads tasks directly; the user reports Today is presently visible, but its rendered source section may not match the selected weekday section.

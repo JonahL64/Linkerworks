@@ -219,6 +219,13 @@ Sprint 4 Homework integration changed `CalendarPlanView.swift`, `ContentView.swi
 Plan month cells now show the existing circular event marker plus a separate horizontal assignment-due marker, and selected-day agendas append unfinished due assignments after deterministically sorted all-day/timed events.
 Today now has a DUE TODAY strip above routine sections with the first three unfinished due assignments, overdue count, inline completion, and a header route to Homework.
 
+Multi-day routine Manage repair changed `Linkerworks/ManageView.swift` and added `LinkerworksTests/ManageRoutineTests.swift`; no model, schema, seed, completion-history, or Today/widget behavior changed.
+Manage now reads persisted `TaskItem`s directly and projects an active or archived task into the same-named section for every weekday in `daysOfWeek`.
+For example, a Sunday/Morning task scheduled every day appears in Morning under Sunday through Saturday, while remaining one persisted task.
+New task creation now explicitly assigns its selected source Section before saving; this avoids relying on the inverse relationship for visibility.
+The existing single `sortOrder` remains shared across those weekday projections; no per-day ordering data was added.
+Validation passed: Swift parse for all app and test sources plus `git diff --check`; focused test execution needs Xcode, which this host does not have.
+
 Operational data-retention review only; no app source, model, project, seed, or asset files changed.
 All user data is stored in `Linkerworks.store` in the shared `group.com.jonah.linkerworks` App Group container.
 An in-place update that retains the same app identity, signing/App Group entitlement, and installed app preserves that store and the shared seed-import marker.
@@ -393,3 +400,9 @@ Progress now indexes snapshots and completion states by day and shares one `Stre
 The routine and assignment widgets now use separate load paths; routine projection reuses one completed-ID set, while assignment ties retain deterministic homework ordering.
 Focused coverage for indexes, ignored rest-day records, Plan ordering, and widget refresh routing was added under `LinkerworksTests/`.
 Swift parsing, project plist lint, and diff whitespace validation pass; XCTest, device profiling, and hands-on iPhone responsiveness checks still require full Xcode.
+
+Multi-day Manage repair now projects a task into every scheduled weekday's same-named section, retaining one TaskItem and shared sort order.
+`Linkerworks/ManageView.swift` saves the chosen source section directly and uses the shared projection for list, next-order, and normalization work.
+`LinkerworksTests/ManageRoutineTests.swift` covers cross-day active/archived visibility and mixed-source ordering.
+Today, widgets, schema, seed data, and completion history were intentionally unchanged; Today projection alignment is documented as deferred work.
+Swift parsing for app/widget/test sources and tracked/untracked whitespace checks pass; Xcode XCTest and UI verification require full Xcode.
