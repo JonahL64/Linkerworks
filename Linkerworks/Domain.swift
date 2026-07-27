@@ -534,8 +534,11 @@ enum DaySnapshotService {
         capturedAt: Date = Date()
     ) throws -> DaySnapshot {
         let key = dayKey(for: date, calendar: calendar)
-        if let existing = try modelContext.fetch(FetchDescriptor<DaySnapshot>())
-            .first(where: { $0.dayKey == key }) {
+        var descriptor = FetchDescriptor<DaySnapshot>(
+            predicate: #Predicate { $0.dayKey == key }
+        )
+        descriptor.fetchLimit = 1
+        if let existing = try modelContext.fetch(descriptor).first {
             return existing
         }
 

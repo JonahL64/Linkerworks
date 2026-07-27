@@ -219,6 +219,20 @@ Sprint 4 Homework integration changed `CalendarPlanView.swift`, `ContentView.swi
 Plan month cells now show the existing circular event marker plus a separate horizontal assignment-due marker, and selected-day agendas append unfinished due assignments after deterministically sorted all-day/timed events.
 Today now has a DUE TODAY strip above routine sections with the first three unfinished due assignments, overdue count, inline completion, and a header route to Homework.
 
+Today responsiveness investigation only; no product source, model, project, seed, or widget files have changed yet.
+The drafted repair spec is `_bmad-output/implementation-artifacts/spec-today-interaction-responsiveness.md` and awaits approval before implementation.
+It isolates quick to-do drafting from Today-wide projection work and constrains day-snapshot lookup to the selected day.
+The observed lag path is parent-owned text state rebuilding Today on every keypress plus an all-snapshot fetch on every routine completion command.
+Current tests identify snapshot idempotency, daily to-do ordering, and shared routine completion as the required regression boundaries.
+`git diff --check` passes for the draft; no device profiling was run because this host has Command Line Tools only.
+
+Today responsiveness repair changed `Linkerworks/ContentView.swift` and `Linkerworks/Domain.swift`; no schema, seed, project, navigation, or widget-layout files changed.
+`QuickTodoComposer` now owns its unsaved text and validation state, so typing does not invalidate Today’s routine/history projections; valid saves still clear the field and failed saves retain the draft.
+`QuickTodoSubmission` centralizes the existing trim/empty validation and overflow-safe next sort order, covered in `LinkerworksTests/DailyTodoTests.swift`.
+`DaySnapshotService.captureIfNeeded` now fetches only the selected day’s snapshot before the existing first-capture task fetch, eliminating the historical snapshot scan from each routine completion.
+`LinkerworksTests/HistoricalProgressTests.swift` and `LinkerworksTests/WidgetProjectionTests.swift` cover existing-snapshot reuse and lift-child completion with historical snapshots.
+Static validation passed: focused Swift parsing and `git diff --check`; full Xcode/device profiling remains required to confirm rapid typing and completion feel on a populated real store.
+
 Multi-day routine Manage repair changed `Linkerworks/ManageView.swift` and added `LinkerworksTests/ManageRoutineTests.swift`; no model, schema, seed, completion-history, or Today/widget behavior changed.
 Manage now reads persisted `TaskItem`s directly and projects an active or archived task into the same-named section for every weekday in `daysOfWeek`.
 For example, a Sunday/Morning task scheduled every day appears in Morning under Sunday through Saturday, while remaining one persisted task.
@@ -406,3 +420,10 @@ Multi-day Manage repair now projects a task into every scheduled weekday's same-
 `LinkerworksTests/ManageRoutineTests.swift` covers cross-day active/archived visibility and mixed-source ordering.
 Today, widgets, schema, seed data, and completion history were intentionally unchanged; Today projection alignment is documented as deferred work.
 Swift parsing for app/widget/test sources and tracked/untracked whitespace checks pass; Xcode XCTest and UI verification require full Xcode.
+
+Today responsiveness repair changed `Linkerworks/ContentView.swift` and `Linkerworks/Domain.swift`; no schema, seed, project, navigation, or widget-layout files changed.
+`QuickTodoComposer` now owns draft text and validation, so keystrokes do not invalidate Today’s routine/history projection; failed saves retain the draft and valid saves clear it.
+`QuickTodoSubmission` centralizes trim/empty validation and overflow-safe next sort order, covered in `LinkerworksTests/DailyTodoTests.swift`.
+`DaySnapshotService.captureIfNeeded` now performs a selected-day, one-record lookup before its existing first-capture task fetch, removing the historical snapshot scan from routine completion.
+`LinkerworksTests/HistoricalProgressTests.swift` and `LinkerworksTests/WidgetProjectionTests.swift` cover snapshot reuse and lift-child completion with historical snapshots.
+Focused Swift parsing and `git diff --check` pass; full Xcode/device profiling remains required to validate rapid typing and completion feel on a populated real store.

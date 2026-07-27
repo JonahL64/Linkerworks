@@ -117,8 +117,6 @@ private struct TodayView: View {
     @State private var routineDay = RoutineDaySelection.selectedDay()
     @State private var showingRolloverConfirmation = false
     @State private var goalkeepingRestDayRevision = 0
-    @State private var quickTodoTitle = ""
-    @State private var quickTodoValidationMessage: String?
     @State private var todoToEdit: DailyTodo?
     @State private var todoDeletionCandidate: DailyTodo?
     @State private var completionRecords: [CompletionRecord] = []
@@ -211,6 +209,10 @@ private struct TodayView: View {
 
     private var todosForToday: [DailyTodo] {
         DailyTodoSupport.todos(on: today, from: dailyTodos, calendar: calendar)
+    }
+
+    private var nextTodoSortOrder: Int {
+        QuickTodoSubmission.nextSortOrder(for: todosForToday)
     }
 
     var body: some View {
@@ -581,27 +583,12 @@ private struct TodayView: View {
 
     private var todosSection: some View {
         SwiftUI.Section("To-dos") {
-            HStack(spacing: LWSpace.xs) {
-                TextField("Add a to-do", text: $quickTodoTitle)
-                    .font(LWFont.body)
-                    .submitLabel(.done)
-                    .onSubmit { addQuickTodo() }
-
-                Button("Add") { addQuickTodo() }
-                    .font(LWFont.calloutMedium)
-                    .foregroundStyle(LWColor.accent)
-                    .frame(
-                        minWidth: LWSpace.minTapTarget,
-                        minHeight: LWSpace.minTapTarget
-                    )
-                    .buttonStyle(.plain)
-            }
-
-            if let quickTodoValidationMessage {
-                Text(quickTodoValidationMessage)
-                    .font(LWFont.caption)
-                    .foregroundStyle(LWColor.danger)
-            }
+            QuickTodoComposer(
+                selectedDate: today,
+                nextSortOrder: nextTodoSortOrder,
+                saveErrorMessage: $saveErrorMessage,
+                calendar: calendar
+            )
 
             if todosForToday.isEmpty {
                 Text("Nothing to do yet.")
@@ -1095,33 +1082,6 @@ private struct TodayView: View {
         }
     }
 
-    private func addQuickTodo() {
-        let title = quickTodoTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty else {
-            quickTodoValidationMessage = "Enter a to-do before adding it."
-            return
-        }
-
-        let highestOrder = todosForToday.map(\.sortOrder).max()
-        let sortOrder = highestOrder == Int.max ? 0 : (highestOrder.map { $0 + 1 } ?? 0)
-        modelContext.insert(DailyTodo(
-            title: title,
-            scheduledDate: today,
-            sortOrder: sortOrder,
-            calendar: calendar
-        ))
-
-        do {
-            try modelContext.save()
-            quickTodoTitle = ""
-            quickTodoValidationMessage = nil
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        } catch {
-            modelContext.rollback()
-            saveErrorMessage = error.localizedDescription
-        }
-    }
-
     private func toggleTodo(_ todo: DailyTodo) {
         todo.isCompleted.toggle()
         todo.completedAt = todo.isCompleted ? Date() : nil
@@ -1360,6 +1320,81 @@ private struct TodayView: View {
                 completionRingPulsing = false
             }
         }
+    }
+}
+
+/// Keeps unsaved text local so typing does not invalidate Today's routine and
+/// history projections. The draft clears only after SwiftData confirms a save.
+@MainActor
+private struct QuickTodoComposer: View {
+    @Environment(\.modelContext) private var modelContext
+
+    let selectedDate: Date
+    let nextSortOrder: Int
+    @Binding var saveErrorMessage: String?
+    let calendar: Calendar
+
+    @State private var title = ""
+    @State private var validationMessage: String?
+
+    var body: some View {
+        HStack(spacing: LWSpace.xs) {
+            TextField("Add a to-do", text: $title)
+                .font(LWFont.body)
+                .submitLabel(.done)
+                .onSubmit { submit() }
+
+            Button("Add") { submit() }
+                .font(LWFont.calloutMedium)
+                .foregroundStyle(LWColor.accent)
+                .frame(
+                    minWidth: LWSpace.minTapTarget,
+                    minHeight: LWSpace.minTapTarget
+                )
+                .buttonStyle(.plain)
+        }
+
+        if let validationMessage {
+            Text(validationMessage)
+                .font(LWFont.caption)
+                .foregroundStyle(LWColor.danger)
+        }
+    }
+
+    private func submit() {
+        guard let trimmedTitle = QuickTodoSubmission.title(from: title) else {
+            validationMessage = "Enter a to-do before adding it."
+            return
+        }
+
+        modelContext.insert(DailyTodo(
+            title: trimmedTitle,
+            scheduledDate: selectedDate,
+            sortOrder: nextSortOrder,
+            calendar: calendar
+        ))
+
+        do {
+            try modelContext.save()
+            title = ""
+            validationMessage = nil
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } catch {
+            modelContext.rollback()
+            saveErrorMessage = error.localizedDescription
+        }
+    }
+}
+
+enum QuickTodoSubmission {
+    static func title(from draft: String) -> String? {
+        let title = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? nil : title
+    }
+
+    static func nextSortOrder(for todos: [DailyTodo]) -> Int {
+        let highestOrder = todos.map(\.sortOrder).max()
+        return highestOrder == Int.max ? 0 : (highestOrder.map { $0 + 1 } ?? 0)
     }
 }
 

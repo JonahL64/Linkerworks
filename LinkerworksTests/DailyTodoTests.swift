@@ -51,6 +51,24 @@ final class DailyTodoTests: XCTestCase {
         XCTAssertEqual(DailyTodoSupport.ordered([laterOrder, second, first]).map(\.id), [first.id, second.id, laterOrder.id])
     }
 
+    func testQuickTodoSubmissionValidatesDraftAndChoosesNextOrder() {
+        let day = date(2026, 7, 26, 0, 0)
+        let todos = [
+            DailyTodo(title: "First", scheduledDate: day, sortOrder: 2, calendar: calendar),
+            DailyTodo(title: "Second", scheduledDate: day, sortOrder: 5, calendar: calendar),
+        ]
+
+        XCTAssertNil(QuickTodoSubmission.title(from: " \n "))
+        XCTAssertEqual(QuickTodoSubmission.title(from: "  Call dentist  "), "Call dentist")
+        XCTAssertEqual(QuickTodoSubmission.nextSortOrder(for: todos), 6)
+        XCTAssertEqual(
+            QuickTodoSubmission.nextSortOrder(for: [
+                DailyTodo(title: "Last", scheduledDate: day, sortOrder: Int.max, calendar: calendar),
+            ]),
+            0
+        )
+    }
+
     func testCompletionAndReopenTransitionTimestamp() {
         let todo = DailyTodo(title: "Pick up prescription", scheduledDate: date(2026, 7, 26, 8, 0), sortOrder: 0, calendar: calendar)
         XCTAssertFalse(todo.isCompleted)

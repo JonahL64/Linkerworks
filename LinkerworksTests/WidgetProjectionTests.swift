@@ -177,4 +177,35 @@ final class WidgetProjectionTests: XCTestCase {
         XCTAssertEqual(Set(records.map(\.taskId)), Set([firstChild.id, secondChild.id]))
         XCTAssertTrue(TaskCompletion.isComplete(parent, completedTaskIDs: Set(records.map(\.taskId))))
     }
+
+    func testLiftCompletionWritesChildRecordsWithHistoricalSnapshots() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let date = calendar.date(from: DateComponents(year: 2026, month: 7, day: 25, hour: 12))!
+        let container = try ModelContainer(for: SharedModelContainer.schema, configurations: [ModelConfiguration(isStoredInMemoryOnly: true)])
+        let context = container.mainContext
+        let parent = TaskItem(title: "Lift", detail: "", daysOfWeek: ["Saturday"], sortOrder: 0, domain: .lifting)
+        let firstChild = TaskItem(title: "Set 1", detail: "", daysOfWeek: ["Saturday"], sortOrder: 0, domain: .lifting, isSubstep: true, parent: parent)
+        let secondChild = TaskItem(title: "Set 2", detail: "", daysOfWeek: ["Saturday"], sortOrder: 1, domain: .lifting, isSubstep: true, parent: parent)
+        parent.children = [firstChild, secondChild]
+        let historicalSnapshots = (1...12).map { offset in
+            DaySnapshot(
+                dayKey: DaySnapshotService.dayKey(
+                    for: calendar.date(byAdding: .day, value: -offset, to: date)!,
+                    calendar: calendar
+                ),
+                scheduledTaskIDs: []
+            )
+        }
+        [parent, firstChild, secondChild].forEach(context.insert)
+        historicalSnapshots.forEach(context.insert)
+        try context.save()
+
+        try RoutineCompletionCommand.complete(taskID: parent.id, at: date, in: context, calendar: calendar)
+
+        let records = try context.fetch(FetchDescriptor<CompletionRecord>())
+        let snapshots = try context.fetch(FetchDescriptor<DaySnapshot>())
+        XCTAssertEqual(Set(records.map(\.taskId)), Set([firstChild.id, secondChild.id]))
+        XCTAssertEqual(snapshots.count, historicalSnapshots.count + 1)
+    }
 }

@@ -173,6 +173,40 @@ final class HistoricalProgressTests: XCTestCase {
         XCTAssertEqual(defaults.integer(forKey: DaySnapshotService.backfillMarkerKey), DaySnapshotService.backfillVersion)
     }
 
+    func testCaptureReturnsExistingDaySnapshotAfterUnrelatedHistoryExists() throws {
+        let container = try inMemoryContainer()
+        let context = container.mainContext
+        let targetDate = utcDate(year: 2026, month: 7, day: 20)
+        let existing = DaySnapshot(
+            dayKey: DaySnapshotService.dayKey(for: targetDate, calendar: calendar),
+            scheduledTaskIDs: [UUID()]
+        )
+        let historicalSnapshots = (1...12).map { offset in
+            DaySnapshot(
+                dayKey: DaySnapshotService.dayKey(
+                    for: calendar.date(byAdding: .day, value: -offset, to: targetDate)!,
+                    calendar: calendar
+                ),
+                scheduledTaskIDs: []
+            )
+        }
+        context.insert(existing)
+        historicalSnapshots.forEach(context.insert)
+        try context.save()
+
+        let captured = try DaySnapshotService.captureIfNeeded(
+            for: targetDate,
+            in: context,
+            calendar: calendar,
+            capturedAt: utcDate(year: 2026, month: 7, day: 21)
+        )
+        let snapshots = try context.fetch(FetchDescriptor<DaySnapshot>())
+
+        XCTAssertEqual(captured.id, existing.id)
+        XCTAssertEqual(snapshots.count, historicalSnapshots.count + 1)
+        XCTAssertEqual(captured.scheduledTaskIDs, existing.scheduledTaskIDs)
+    }
+
     func testLegacyCompletionRecordDefaultsToComplete() {
         let taskID = UUID()
         let record = CompletionRecord(
