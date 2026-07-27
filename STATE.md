@@ -427,3 +427,11 @@ Today responsiveness repair changed `Linkerworks/ContentView.swift` and `Linkerw
 `DaySnapshotService.captureIfNeeded` now performs a selected-day, one-record lookup before its existing first-capture task fetch, removing the historical snapshot scan from routine completion.
 `LinkerworksTests/HistoricalProgressTests.swift` and `LinkerworksTests/WidgetProjectionTests.swift` cover snapshot reuse and lift-child completion with historical snapshots.
 Focused Swift parsing and `git diff --check` pass; full Xcode/device profiling remains required to validate rapid typing and completion feel on a populated real store.
+
+Weight tracking added `WeightEntry` in `Linkerworks/Models.swift`, registered in the existing App Group schema.
+`WeightEntry.dayKey` is unique and timezone-stable, so one pound-valued measurement is preserved per intended calendar day.
+`Linkerworks/WeightView.swift` is reachable from Log and supports validated add/edit/delete, history, and accessible Swift Charts trend states.
+No data is fabricated for empty or one-entry histories; charts connect only actual chronological weigh-ins.
+`MealEntryEditorView` in `Linkerworks/NutritionView.swift` now replaces the initial detailed-macro zero on the first typed digit.
+`LinkerworksTests/WeightTrackerTests.swift` covers ordering, same-day lookup, normalization, and timezone stability.
+Swift parsing for app/tests and `git diff --check` pass; Xcode build, migration, XCTest, and device UI validation still require full Xcode.

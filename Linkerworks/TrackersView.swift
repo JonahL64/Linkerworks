@@ -26,6 +26,16 @@ struct TrackersView: View {
                             symbol: "fork.knife"
                         )
                     }
+
+                    NavigationLink {
+                        WeightView()
+                    } label: {
+                        LogDestinationRow(
+                            title: "Weight",
+                            detail: "Daily weigh-ins and trend history",
+                            symbol: "scalemass"
+                        )
+                    }
                 } header: {
                     Text("Log")
                         .trainingLogSectionLabel()

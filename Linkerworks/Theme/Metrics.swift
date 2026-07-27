@@ -30,6 +30,11 @@ enum LWSpace {
     /// Minimum height for a tappable row. Below 44 fails Apple's target guidance;
     /// the old checklist rows were routinely under this.
     static let minTapTarget: CGFloat = 44
+
+    /// Dimensions used by data-entry and data-visualization controls.
+    static let numericFieldWidth: CGFloat = 100
+    static let chartHeight: CGFloat = 220
+    static let chartPointArea: CGFloat = 36
 }
 
 enum LWRadius {

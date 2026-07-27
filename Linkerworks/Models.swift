@@ -610,6 +610,84 @@ final class MealEntry {
     }
 }
 
+/// A single manually recorded body-weight measurement for a calendar day.
+///
+/// The UI upserts through `WeightEntrySupport` so the store contains at most
+/// one entry for a day. Keeping the date normalized makes that invariant
+/// straightforward to enforce and keeps chart/history projection deterministic.
+@Model
+final class WeightEntry {
+    @Attribute(.unique) var id: UUID
+    var date: Date
+    @Attribute(.unique) var dayKey: String
+    var pounds: Double
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        date: Date,
+        pounds: Double,
+        createdAt: Date = Date(),
+        calendar: Calendar = .current
+    ) {
+        self.id = id
+        self.date = calendar.startOfDay(for: date)
+        self.dayKey = WeightEntrySupport.dayKey(for: date, calendar: calendar)
+        self.pounds = pounds
+        self.createdAt = createdAt
+    }
+}
+
+enum WeightEntrySupport {
+    static func dayKey(for date: Date, calendar: Calendar = .current) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 0,
+            components.month ?? 0,
+            components.day ?? 0
+        )
+    }
+
+    static func date(for dayKey: String, calendar: Calendar = .current) -> Date? {
+        let parts = dayKey.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else { return nil }
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))
+    }
+
+    static func displayDate(for entry: WeightEntry, calendar: Calendar = .current) -> Date {
+        date(for: entry.dayKey, calendar: calendar) ?? entry.date
+    }
+
+    static func entry(
+        on date: Date,
+        from entries: [WeightEntry],
+        calendar: Calendar = .current
+    ) -> WeightEntry? {
+        entries(on: date, from: entries, calendar: calendar).first
+    }
+
+    static func entries(
+        on date: Date,
+        from entries: [WeightEntry],
+        calendar: Calendar = .current
+    ) -> [WeightEntry] {
+        let key = dayKey(for: date, calendar: calendar)
+        return ordered(entries.filter { $0.dayKey == key })
+    }
+
+    static func ordered(_ entries: [WeightEntry]) -> [WeightEntry] {
+        entries.sorted { lhs, rhs in
+            if lhs.dayKey != rhs.dayKey { return lhs.dayKey < rhs.dayKey }
+            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+    }
+}
+
 @Model
 final class DailyMacroTarget {
     static let singletonKey = "daily"

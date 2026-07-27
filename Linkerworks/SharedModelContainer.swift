@@ -19,6 +19,7 @@ enum SharedModelContainer {
         DaySnapshot.self,
         DaySnapshotCompletionUnit.self,
         MealEntry.self,
+        WeightEntry.self,
         DailyMacroTarget.self,
         SavedMeal.self,
         WorkoutSession.self,

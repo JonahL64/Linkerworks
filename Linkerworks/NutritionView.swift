@@ -666,10 +666,10 @@ private struct MealEntryEditorView: View {
                                 Text(category.displayName).tag(category)
                             }
                         }
-                        macroField("Protein", value: $proteinGrams, suffix: "g")
-                        macroField("Carbohydrates", value: $carbohydrateGrams, suffix: "g")
-                        macroField("Fat", value: $fatGrams, suffix: "g")
-                        macroField("Fiber", value: $fiberGrams, suffix: "g")
+                        macroField("Protein", value: $proteinGrams, suffix: "g", replacesDefaultZero: entry == nil)
+                        macroField("Carbohydrates", value: $carbohydrateGrams, suffix: "g", replacesDefaultZero: entry == nil)
+                        macroField("Fat", value: $fatGrams, suffix: "g", replacesDefaultZero: entry == nil)
+                        macroField("Fiber", value: $fiberGrams, suffix: "g", replacesDefaultZero: entry == nil)
                     }
                 }
 
@@ -699,17 +699,48 @@ private struct MealEntryEditorView: View {
         .trainingLogNavigation()
     }
 
-    private func macroField(_ title: String, value: Binding<String>, suffix: String) -> some View {
+    private func macroField(
+        _ title: String,
+        value: Binding<String>,
+        suffix: String,
+        replacesDefaultZero: Bool = false
+    ) -> some View {
         HStack {
             Text(title)
             Spacer()
-            TextField("0", text: value)
+            TextField("0", text: macroInputBinding(value, replacesDefaultZero: replacesDefaultZero))
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 90)
             Text(suffix)
                 .foregroundStyle(TrainingLogTheme.secondaryText)
         }
+    }
+
+    private func macroInputBinding(
+        _ value: Binding<String>,
+        replacesDefaultZero: Bool
+    ) -> Binding<String> {
+        Binding(
+            get: { value.wrappedValue },
+            set: { enteredValue in
+                guard replacesDefaultZero,
+                      value.wrappedValue == "0",
+                      enteredValue.count > 1,
+                      enteredValue.first == "0" else {
+                    value.wrappedValue = enteredValue
+                    return
+                }
+
+                // A new detail field starts at zero for validity. The first
+                // typed digit arrives as e.g. "025", which should mean 25.
+                // Entering zero intentionally remains a valid zero value.
+                value.wrappedValue = String(enteredValue.drop { $0 == "0" })
+                if value.wrappedValue.isEmpty {
+                    value.wrappedValue = "0"
+                }
+            }
+        )
     }
 
     private func save() {
